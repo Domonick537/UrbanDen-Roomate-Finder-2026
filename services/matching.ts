@@ -135,6 +135,8 @@ export const getPotentialMatches = async (currentUser: User): Promise<(User & { 
       gender: profile.gender,
       occupation: profile.occupation,
       bio: profile.bio,
+      email: profile.email || '',
+      phone: profile.phone,
       photos: profile.photos || [],
       preferences: {
         genderPreference: prefs.gender_preference || 'any',
@@ -154,6 +156,8 @@ export const getPotentialMatches = async (currentUser: User): Promise<(User & { 
       isVerified: profile.is_verified,
       isEmailVerified: profile.is_email_verified,
       isPhoneVerified: profile.is_phone_verified,
+      createdAt: new Date(profile.created_at || Date.now()),
+      lastActive: new Date(profile.last_active || Date.now()),
     };
   };
 
@@ -221,6 +225,8 @@ export const handleSwipe = async (
             gender: profile.gender,
             occupation: profile.occupation,
             bio: profile.bio,
+            email: profile.email || '',
+            phone: profile.phone,
             photos: profile.photos || [],
             preferences: {
               genderPreference: prefs.gender_preference || 'any',
@@ -240,6 +246,8 @@ export const handleSwipe = async (
             isVerified: profile.is_verified,
             isEmailVerified: profile.is_email_verified,
             isPhoneVerified: profile.is_phone_verified,
+            createdAt: new Date(profile.created_at || Date.now()),
+            lastActive: new Date(profile.last_active || Date.now()),
           };
         };
 

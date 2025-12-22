@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Square, CheckSquare, X } from 'lucide-react-native';
-import { setUserAgreementsAccepted } from '../services/storage';
 
 interface UserAgreementsProps {
   onAccept: () => void;
@@ -12,12 +11,11 @@ export default function UserAgreements({ onAccept, onDecline }: UserAgreementsPr
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!termsAccepted || !privacyAccepted) {
       Alert.alert('Required', 'Please accept both Terms of Service and Privacy Policy to continue.');
       return;
     }
-    await setUserAgreementsAccepted();
     onAccept();
   };
 

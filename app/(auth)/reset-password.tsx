@@ -102,6 +102,7 @@ export default function ResetPasswordScreen() {
         <Toast
           message={toast.message}
           type={toast.type}
+          visible={toast.visible}
           onHide={hideToast}
         />
       )}

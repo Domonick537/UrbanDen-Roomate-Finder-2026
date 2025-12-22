@@ -45,10 +45,10 @@ export default function SignupScreen() {
     await createAccount();
   };
 
-  const handleAgreementsAccept = async (userId: string) => {
+  const handleAgreementsAccept = async () => {
     setTermsAccepted(true);
     setShowAgreements(false);
-    await setUserAgreementsAccepted(userId);
+    await createAccount();
   };
 
   const createAccount = async () => {
