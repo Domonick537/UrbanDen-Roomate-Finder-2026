@@ -1,0 +1,354 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  ScrollView,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Send, Smile, User as UserIcon } from 'lucide-react-native';
+import { getCurrentUser, getMessages, addMessage, getMatches, getAllUsers } from '../../services/storage';
+import { subscribeToMessages, markMessagesAsRead } from '../../services/realtime';
+import { User, Message, ICE_BREAKERS } from '../../types';
+
+export default function ChatScreen() {
+  const router = useRouter();
+  const { matchId } = useLocalSearchParams<{ matchId: string }>();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    loadChat();
+  }, [matchId]);
+
+  useEffect(() => {
+    if (!matchId || !currentUser) return;
+
+    const unsubscribe = subscribeToMessages(matchId, (newMessage) => {
+      setMessages((prev) => {
+        if (prev.some(m => m.id === newMessage.id)) {
+          return prev;
+        }
+        return [...prev, newMessage];
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    markMessagesAsRead(matchId, currentUser.id);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [matchId, currentUser]);
+
+  const loadChat = async () => {
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    setCurrentUser(user);
+
+    const matches = await getMatches();
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+
+    const otherUserId = match.userId1 === user.id ? match.userId2 : match.userId1;
+    const allUsers = await getAllUsers();
+    const other = allUsers.find(u => u.id === otherUserId);
+    setOtherUser(other || null);
+
+    const chatMessages = await getMessages(matchId);
+    setMessages(chatMessages);
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const handleSend = async (text?: string) => {
+    const messageText = text || inputText.trim();
+    if (!messageText || !currentUser) return;
+
+    const newMessage: Message = {
+      id: `msg_${Date.now()}`,
+      matchId,
+      senderId: currentUser.id,
+      content: messageText,
+      timestamp: new Date(),
+      isRead: false,
+    };
+
+    await addMessage(newMessage);
+    setMessages([...messages, newMessage]);
+    setInputText('');
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isMine = item.senderId === currentUser?.id;
+
+    return (
+      <View style={[styles.messageContainer, isMine ? styles.myMessage : styles.theirMessage]}>
+        <View style={[styles.messageBubble, isMine ? styles.myBubble : styles.theirBubble]}>
+          <Text style={[styles.messageText, isMine ? styles.myText : styles.theirText]}>
+            {item.content}
+          </Text>
+        </View>
+        <Text style={styles.timestamp}>
+          {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderIceBreaker = (iceBreaker: string, index: number) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.iceBreakerButton}
+      onPress={() => handleSend(iceBreaker)}
+    >
+      <Text style={styles.iceBreakerText}>{iceBreaker}</Text>
+    </TouchableOpacity>
+  );
+
+  if (!currentUser || !otherUser) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#111827" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            {otherUser.profilePicture ? (
+              <Image source={{ uri: otherUser.profilePicture }} style={styles.headerImage} />
+            ) : (
+              <View style={[styles.headerImage, styles.placeholderImage]}>
+                <UserIcon size={16} color="#9CA3AF" />
+              </View>
+            )}
+            <Text style={styles.headerTitle}>{otherUser.firstName}</Text>
+          </View>
+          <View style={{ width: 24 }} />
+        </View>
+
+        {messages.length === 0 && (
+          <View style={styles.iceBreakersContainer}>
+            <View style={styles.iceBreakersHeader}>
+              <Smile size={20} color="#4F46E5" />
+              <Text style={styles.iceBreakersTitle}>Ice Breakers</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.iceBreakersScroll}
+            >
+              {ICE_BREAKERS.map((iceBreaker, index) => renderIceBreaker(iceBreaker, index))}
+            </ScrollView>
+          </View>
+        )}
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.messagesContainer}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        />
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            onPress={() => handleSend()}
+            disabled={!inputText.trim()}
+          >
+            <Send size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  placeholderImage: {
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  iceBreakersContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  iceBreakersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  iceBreakersTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  iceBreakersScroll: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  iceBreakerButton: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  iceBreakerText: {
+    fontSize: 14,
+    color: '#4F46E5',
+  },
+  messagesContainer: {
+    padding: 20,
+  },
+  messageContainer: {
+    marginBottom: 16,
+  },
+  myMessage: {
+    alignItems: 'flex-end',
+  },
+  theirMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  myBubble: {
+    backgroundColor: '#4F46E5',
+    borderBottomRightRadius: 4,
+  },
+  theirBubble: {
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  myText: {
+    color: '#FFFFFF',
+  },
+  theirText: {
+    color: '#111827',
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    maxHeight: 100,
+    marginRight: 12,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+});
