@@ -32,7 +32,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    initializeApp();
+    if (fontsLoaded) {
+      initializeApp();
+    }
   }, [fontsLoaded]);
 
   useEffect(() => {
@@ -46,20 +48,23 @@ export default function RootLayout() {
 
 
   const initializeApp = async () => {
-    if (!fontsLoaded) return;
+    try {
+      await initializeMockData();
 
-    await initializeMockData();
+      const hasSeenSplash = await AsyncStorage.getItem('hasSeenSplash');
+      const currentUser = await getCurrentUser();
 
-    const hasSeenSplash = await AsyncStorage.getItem('hasSeenSplash');
-    const currentUser = await getCurrentUser();
+      if (hasSeenSplash === 'true' && currentUser) {
+        setShowSplash(false);
+      } else {
+        await AsyncStorage.removeItem('hasSeenSplash');
+      }
 
-    if (hasSeenSplash === 'true' && currentUser) {
-      setShowSplash(false);
-    } else {
-      await AsyncStorage.removeItem('hasSeenSplash');
+      setAppReady(true);
+    } catch (error) {
+      console.error('Error initializing app:', error);
+      setAppReady(true);
     }
-
-    setAppReady(true);
   };
 
   const initializeMockData = async () => {
@@ -92,11 +97,11 @@ export default function RootLayout() {
     router.replace('/(tabs)');
   };
 
-  if (!appReady || !fontsLoaded) {
+  if (!fontsLoaded) {
     return null;
   }
 
-  if (showSplash) {
+  if (!appReady || showSplash) {
     return <SplashScreenComponent onFinish={handleSplashFinish} />;
   }
 

@@ -204,20 +204,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginTop: 30,
-    fontFamily: 'Inter-Bold',
     letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 16,
     color: '#C4B5FD',
     marginTop: 8,
-    fontFamily: 'Inter-Regular',
   },
   subtitle: {
     fontSize: 13,
     color: '#A78BFA',
     marginTop: 4,
-    fontFamily: 'Inter-Regular',
     fontStyle: 'italic',
   },
 });
