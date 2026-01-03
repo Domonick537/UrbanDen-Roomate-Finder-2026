@@ -25,7 +25,7 @@ export default function PrivacyPolicyScreen() {
           <ArrowLeft size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy Policy</Text>
-        <Text style={styles.headerSubtitle}>Last updated: December 2024</Text>
+        <Text style={styles.headerSubtitle}>Last updated: January 1, 2026</Text>
       </LinearGradient>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
