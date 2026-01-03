@@ -150,11 +150,12 @@ export default function OnboardingScreen() {
     setCurrentStep(currentStep + 1);
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     } else {
-      router.back();
+      await supabase.auth.signOut();
+      router.replace('/(auth)/signup');
     }
   };
 
