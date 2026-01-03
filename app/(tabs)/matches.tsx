@@ -15,6 +15,7 @@ import { getCurrentUser, getMessages } from '../../services/storage';
 import { getUserMatches } from '../../services/matching';
 import { supabase } from '../../services/supabase';
 import { User, Match, Message } from '../../types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface MatchWithDetails extends Match {
   user: User;
@@ -24,6 +25,7 @@ interface MatchWithDetails extends Match {
 
 export default function MatchesScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [matches, setMatches] = useState<MatchWithDetails[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,7 +130,7 @@ export default function MatchesScreen() {
   );
 
   const renderMatch = ({ item }: { item: MatchWithDetails }) => (
-    <View style={styles.matchCard}>
+    <View style={[styles.matchCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <TouchableOpacity
         style={styles.matchImageContainer}
         onPress={() => router.push(`/profile/view/${item.user.id}`)}
@@ -136,17 +138,17 @@ export default function MatchesScreen() {
         {item.user.profilePicture ? (
           <Image source={{ uri: item.user.profilePicture }} style={styles.matchImage} />
         ) : (
-          <View style={[styles.matchImage, styles.placeholderImage]}>
-            <UserIcon size={32} color="#9CA3AF" />
+          <View style={[styles.matchImage, styles.placeholderImage, { backgroundColor: theme.colors.borderLight }]}>
+            <UserIcon size={32} color={theme.colors.textTertiary} />
           </View>
         )}
         {item.user.isVerified && (
-          <View style={styles.verifiedBadge}>
+          <View style={[styles.verifiedBadge, { backgroundColor: theme.colors.success, borderColor: theme.colors.card }]}>
             <Shield size={16} color="#FFFFFF" />
           </View>
         )}
         {item.unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
+          <View style={[styles.unreadBadge, { backgroundColor: theme.colors.error, borderColor: theme.colors.card }]}>
             <Text style={styles.unreadText}>{item.unreadCount}</Text>
           </View>
         )}
@@ -157,37 +159,37 @@ export default function MatchesScreen() {
         onPress={() => router.push(`/chat/${item.id}`)}
       >
         <View style={styles.matchHeader}>
-          <Text style={styles.matchName}>{item.user.firstName}</Text>
-          <View style={styles.compatibilityBadge}>
+          <Text style={[styles.matchName, { color: theme.colors.text }]}>{item.user.firstName}</Text>
+          <View style={[styles.compatibilityBadge, { backgroundColor: theme.colors.primary }]}>
             <Text style={styles.compatibilityText}>{item.compatibility}%</Text>
           </View>
         </View>
-        <Text style={styles.matchLocation}>
+        <Text style={[styles.matchLocation, { color: theme.colors.textSecondary }]}>
           {item.user.preferences.location.city}, {item.user.preferences.location.state}
         </Text>
-        <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
+        <Text style={[styles.lastMessage, { color: theme.colors.textTertiary }, item.unreadCount > 0 && [styles.unreadMessage, { color: theme.colors.text }]]} numberOfLines={1}>
           {item.lastMessage || 'Start a conversation!'}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push(`/chat/${item.id}`)}>
-        <MessageCircle size={20} color="#4F46E5" />
+        <MessageCircle size={20} color={theme.colors.primary} />
       </TouchableOpacity>
     </View>
   );
 
   if (!currentUser) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text }}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={['#4F46E5', '#6366F1']}
+        colors={theme.colors.gradient}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -197,28 +199,28 @@ export default function MatchesScreen() {
       </LinearGradient>
 
       {matches.length > 0 && (
-        <View style={styles.searchContainer}>
-          <Search size={20} color="#9CA3AF" />
+        <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <Search size={20} color={theme.colors.textTertiary} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: theme.colors.text }]}
             placeholder="Search matches..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
           />
         </View>
       )}
 
       {filteredMatches.length === 0 ? (
         <View style={styles.emptyState}>
-          <MessageCircle size={64} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No matches yet</Text>
-          <Text style={styles.emptySubtitle}>
+          <MessageCircle size={64} color={theme.colors.borderLight} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No matches yet</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
             Keep swiping to find your perfect roommate! When you both like each other, you'll see
             them here.
           </Text>
           <TouchableOpacity
-            style={styles.discoverButton}
+            style={[styles.discoverButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.push('/(tabs)')}
           >
             <Text style={styles.discoverButtonText}>Start Discovering</Text>

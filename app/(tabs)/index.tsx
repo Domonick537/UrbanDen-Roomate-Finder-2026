@@ -21,12 +21,14 @@ import MatchCelebration from '../../components/MatchCelebration';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { getCardWidth, getCardHeight, isDesktop, getMaxWidth } from '../../utils/responsive';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
 
 export default function DiscoverScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const { toast, showToast, hideToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [potentialMatches, setPotentialMatches] = useState<(User & { compatibility: number })[]>([]);
@@ -214,64 +216,66 @@ export default function DiscoverScreen() {
                 { translateY: position.y },
                 { rotate: rotation },
               ],
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
             },
           ]}
           {...panResponder.panHandlers}
         >
-          <Animated.View style={[styles.likeOverlay, { opacity: likeOpacity }]}>
+          <Animated.View style={[styles.likeOverlay, { opacity: likeOpacity, backgroundColor: theme.colors.success }]}>
             <Text style={styles.overlayText}>LIKE</Text>
           </Animated.View>
-          <Animated.View style={[styles.passOverlay, { opacity: passOpacity }]}>
+          <Animated.View style={[styles.passOverlay, { opacity: passOpacity, backgroundColor: theme.colors.error }]}>
             <Text style={styles.overlayText}>PASS</Text>
           </Animated.View>
 
           {user.profilePicture ? (
             <Image source={{ uri: user.profilePicture }} style={styles.cardImage} />
           ) : (
-            <View style={[styles.cardImage, styles.placeholderImage]}>
-              <UserIcon size={80} color="#9CA3AF" />
+            <View style={[styles.cardImage, styles.placeholderImage, { backgroundColor: theme.colors.borderLight }]}>
+              <UserIcon size={80} color={theme.colors.textTertiary} />
             </View>
           )}
 
-          <View style={styles.cardContent}>
+          <View style={[styles.cardContent, { backgroundColor: theme.colors.card }]}>
             <View style={styles.cardHeader}>
               <View style={styles.nameRow}>
-                <Text style={styles.name}>
+                <Text style={[styles.name, { color: theme.colors.text }]}>
                   {user.firstName}, {user.age}
                 </Text>
-                {user.isVerified && <Shield size={20} color="#10B981" />}
+                {user.isVerified && <Shield size={20} color={theme.colors.success} />}
               </View>
-              <View style={styles.compatibilityBadge}>
+              <View style={[styles.compatibilityBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.compatibilityText}>{user.compatibility}%</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <Briefcase size={14} color="#6B7280" />
-              <Text style={styles.infoText}>{user.occupation}</Text>
+              <Briefcase size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>{user.occupation}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <MapPin size={14} color="#6B7280" />
-              <Text style={styles.infoText}>
+              <MapPin size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
                 {user.preferences.location.city}, {user.preferences.location.state}
               </Text>
             </View>
 
-            <Text style={styles.bio} numberOfLines={3}>
+            <Text style={[styles.bio, { color: theme.colors.text }]} numberOfLines={3}>
               {user.bio}
             </Text>
 
             <View style={styles.preferences}>
               <View style={styles.preferenceItem}>
-                <DollarSign size={14} color="#6B7280" />
-                <Text style={styles.preferenceText}>
+                <DollarSign size={14} color={theme.colors.textSecondary} />
+                <Text style={[styles.preferenceText, { color: theme.colors.textSecondary }]}>
                   ${user.preferences.budgetMin} - ${user.preferences.budgetMax}
                 </Text>
               </View>
               <View style={styles.preferenceItem}>
-                <Calendar size={14} color="#6B7280" />
-                <Text style={styles.preferenceText}>
+                <Calendar size={14} color={theme.colors.textSecondary} />
+                <Text style={[styles.preferenceText, { color: theme.colors.textSecondary }]}>
                   {user.preferences.moveInDate === 'urgent'
                     ? 'ASAP'
                     : user.preferences.moveInDate === '2-3months'
@@ -294,18 +298,20 @@ export default function DiscoverScreen() {
           {
             transform: [{ scale: nextCardScale }],
             opacity: nextCardOpacity,
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
           },
         ]}
       >
         {user.profilePicture ? (
           <Image source={{ uri: user.profilePicture }} style={styles.cardImage} />
         ) : (
-          <View style={[styles.cardImage, styles.placeholderImage]}>
-            <UserIcon size={80} color="#9CA3AF" />
+          <View style={[styles.cardImage, styles.placeholderImage, { backgroundColor: theme.colors.borderLight }]}>
+            <UserIcon size={80} color={theme.colors.textTertiary} />
           </View>
         )}
-        <View style={styles.cardContent}>
-          <Text style={styles.name}>
+        <View style={[styles.cardContent, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.name, { color: theme.colors.text }]}>
             {user.firstName}, {user.age}
           </Text>
         </View>
@@ -315,9 +321,9 @@ export default function DiscoverScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <LinearGradient
-          colors={['#F59E0B', '#F97316']}
+          colors={theme.colors.gradient}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -331,23 +337,23 @@ export default function DiscoverScreen() {
 
   if (!currentUser) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text }}>Loading...</Text>
       </View>
     );
   }
 
   if (currentIndex >= potentialMatches.length) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.emptyState}>
-          <Home size={64} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No more profiles!</Text>
-          <Text style={styles.emptySubtitle}>
+          <Home size={64} color={theme.colors.borderLight} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No more profiles!</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
             Check back later for new potential roommates in your area.
           </Text>
           <TouchableOpacity
-            style={styles.refreshButton}
+            style={[styles.refreshButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => {
               triggerHaptic('medium');
               loadMatches();
@@ -361,8 +367,8 @@ export default function DiscoverScreen() {
   }
 
   const containerStyle = isDesktop()
-    ? [styles.container, styles.desktopContainer]
-    : styles.container;
+    ? [styles.container, styles.desktopContainer, { backgroundColor: theme.colors.background }]
+    : [styles.container, { backgroundColor: theme.colors.background }];
 
   const contentWrapper = isDesktop()
     ? [styles.desktopWrapper]
@@ -389,7 +395,7 @@ export default function DiscoverScreen() {
 
       <View style={contentWrapper}>
         <LinearGradient
-          colors={['#4F46E5', '#6366F1']}
+          colors={theme.colors.gradient}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -405,20 +411,20 @@ export default function DiscoverScreen() {
         <View style={styles.actions}>
           <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
             <TouchableOpacity
-              style={styles.passButton}
+              style={[styles.passButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.error }]}
               onPress={handlePass}
               activeOpacity={0.8}
             >
-              <X size={32} color="#EF4444" />
+              <X size={32} color={theme.colors.error} />
             </TouchableOpacity>
           </Animated.View>
           <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
             <TouchableOpacity
-              style={styles.likeButton}
+              style={[styles.likeButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.success }]}
               onPress={handleLike}
               activeOpacity={0.8}
             >
-              <Heart size={32} color="#10B981" />
+              <Heart size={32} color={theme.colors.success} />
             </TouchableOpacity>
           </Animated.View>
         </View>
