@@ -12,13 +12,14 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Send, Smile, User as UserIcon } from 'lucide-react-native';
+import { ArrowLeft, Send, Smile, User as UserIcon, CheckSquare, ChevronRight } from 'lucide-react-native';
 import { getCurrentUser, getMessages, addMessage } from '../../services/storage';
 import { getUserMatches } from '../../services/matching';
 import { subscribeToMessages, markMessagesAsRead } from '../../services/realtime';
 import { supabase } from '../../services/supabase';
 import { User, Message, ICE_BREAKERS } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getMatchChecklistStats, getChecklistTemplates } from '../../services/checklist';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function ChatScreen() {
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [checklistStats, setChecklistStats] = useState<{ totalItems: number; completedItems: number; progressPercentage: number } | null>(null);
+  const [showChecklistBanner, setShowChecklistBanner] = useState(true);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -117,6 +120,9 @@ export default function ChatScreen() {
 
     const chatMessages = await getMessages(matchId);
     setMessages(chatMessages);
+
+    const stats = await getMatchChecklistStats(user.id, matchId);
+    setChecklistStats(stats);
 
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -229,6 +235,35 @@ export default function ChatScreen() {
           </View>
         )}
 
+        {showChecklistBanner && (
+          <TouchableOpacity
+            style={[styles.checklistBanner, { backgroundColor: theme.colors.primaryLight, borderColor: theme.colors.primaryBorder }]}
+            onPress={() => {
+              router.push({
+                pathname: '/checklists',
+                params: { matchId },
+              });
+            }}
+          >
+            <View style={styles.checklistBannerLeft}>
+              <View style={[styles.checklistIconContainer, { backgroundColor: theme.colors.primary }]}>
+                <CheckSquare size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.checklistBannerContent}>
+                <Text style={[styles.checklistBannerTitle, { color: theme.colors.text }]}>
+                  Safety Checklists for {otherUser?.firstName}
+                </Text>
+                <Text style={[styles.checklistBannerSubtitle, { color: theme.colors.textSecondary }]}>
+                  {checklistStats?.totalItems === 0
+                    ? 'Start your safety checklist before meeting'
+                    : `${checklistStats?.completedItems || 0} of ${checklistStats?.totalItems || 0} items completed`}
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color={theme.colors.textTertiary} />
+          </TouchableOpacity>
+        )}
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -330,6 +365,45 @@ const styles = StyleSheet.create({
   iceBreakerText: {
     fontSize: 14,
     color: '#4F46E5',
+  },
+  checklistBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    padding: 16,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  checklistBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  checklistIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  checklistBannerContent: {
+    flex: 1,
+  },
+  checklistBannerTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  checklistBannerSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
   },
   messagesContainer: {
     padding: 20,

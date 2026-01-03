@@ -25,6 +25,7 @@ export interface UserChecklistProgress {
   id: string;
   user_id: string;
   item_id: string;
+  match_id?: string | null;
   is_completed: boolean;
   selected_value: string | null;
   notes: string | null;
@@ -58,7 +59,8 @@ export async function getChecklistTemplates(): Promise<ChecklistTemplate[]> {
 
 export async function getChecklistWithItems(
   templateId: string,
-  userId: string
+  userId: string,
+  matchId?: string | null
 ): Promise<ChecklistTemplateWithItems | null> {
   const { data: template, error: templateError } = await supabase
     .from('checklist_templates')
@@ -82,7 +84,7 @@ export async function getChecklistWithItems(
     return null;
   }
 
-  const { data: progress, error: progressError } = await supabase
+  let progressQuery = supabase
     .from('user_checklist_progress')
     .select('*')
     .eq('user_id', userId)
@@ -90,6 +92,14 @@ export async function getChecklistWithItems(
       'item_id',
       items?.map((i) => i.id) || []
     );
+
+  if (matchId) {
+    progressQuery = progressQuery.eq('match_id', matchId);
+  } else {
+    progressQuery = progressQuery.is('match_id', null);
+  }
+
+  const { data: progress, error: progressError } = await progressQuery;
 
   if (progressError) {
     console.error('Error fetching progress:', progressError);
@@ -119,7 +129,8 @@ export async function updateChecklistProgress(
   itemId: string,
   isCompleted: boolean,
   selectedValue?: string,
-  notes?: string
+  notes?: string,
+  matchId?: string | null
 ): Promise<void> {
   const updateData: any = {
     user_id: userId,
@@ -127,6 +138,10 @@ export async function updateChecklistProgress(
     is_completed: isCompleted,
     updated_at: new Date().toISOString(),
   };
+
+  if (matchId !== undefined) {
+    updateData.match_id = matchId;
+  }
 
   if (selectedValue !== undefined) {
     updateData.selected_value = selectedValue;
@@ -144,9 +159,7 @@ export async function updateChecklistProgress(
 
   const { error } = await supabase
     .from('user_checklist_progress')
-    .upsert(updateData, {
-      onConflict: 'user_id,item_id',
-    });
+    .upsert(updateData);
 
   if (error) {
     console.error('Error updating progress:', error);
@@ -210,5 +223,50 @@ export async function getUserChecklistStats(userId: string): Promise<{
     completedChecklists,
     totalItems,
     completedItems,
+  };
+}
+
+export async function getMatchChecklists(
+  userId: string,
+  matchId: string
+): Promise<ChecklistTemplate[]> {
+  const templates = await getChecklistTemplates();
+
+  const checklistsWithProgress = await Promise.all(
+    templates.map(async (template) => {
+      const checklist = await getChecklistWithItems(template.id, userId, matchId);
+      return {
+        ...template,
+        completedCount: checklist?.completedCount || 0,
+        totalCount: checklist?.totalCount || 0,
+      };
+    })
+  );
+
+  return checklistsWithProgress;
+}
+
+export async function getMatchChecklistStats(
+  userId: string,
+  matchId: string
+): Promise<{
+  totalItems: number;
+  completedItems: number;
+  progressPercentage: number;
+}> {
+  const { data: progress } = await supabase
+    .from('user_checklist_progress')
+    .select('item_id, is_completed')
+    .eq('user_id', userId)
+    .eq('match_id', matchId);
+
+  const completedItems = progress?.filter((p) => p.is_completed).length || 0;
+  const totalItems = progress?.length || 0;
+  const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+  return {
+    totalItems,
+    completedItems,
+    progressPercentage,
   };
 }

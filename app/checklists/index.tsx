@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   Shield,
@@ -17,9 +17,10 @@ import {
   CheckCircle2,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getChecklistTemplates, getUserChecklistStats } from '../../services/checklist';
+import { getChecklistTemplates, getUserChecklistStats, getMatchChecklists, getMatchChecklistStats } from '../../services/checklist';
 import type { ChecklistTemplate } from '../../services/checklist';
 import { getCurrentUserId } from '../../services/storage';
+import { supabase } from '../../services/supabase';
 
 const iconMap = {
   shield: Shield,
@@ -37,14 +38,16 @@ const categoryColors = {
 
 export default function ChecklistsScreen() {
   const router = useRouter();
+  const { matchId } = useLocalSearchParams();
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [matchUserName, setMatchUserName] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [matchId]);
 
   const loadData = async () => {
     try {
@@ -52,12 +55,40 @@ export default function ChecklistsScreen() {
       setUserId(currentUserId);
 
       if (currentUserId) {
-        const [templatesData, statsData] = await Promise.all([
-          getChecklistTemplates(),
-          getUserChecklistStats(currentUserId),
-        ]);
-        setTemplates(templatesData);
-        setStats(statsData);
+        if (matchId) {
+          const { data: match } = await supabase
+            .from('matches')
+            .select('user_id_1, user_id_2')
+            .eq('id', matchId as string)
+            .maybeSingle();
+
+          if (match) {
+            const otherUserId = match.user_id_1 === currentUserId ? match.user_id_2 : match.user_id_1;
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name')
+              .eq('id', otherUserId)
+              .maybeSingle();
+
+            if (profile) {
+              setMatchUserName(profile.first_name);
+            }
+          }
+
+          const [templatesData, statsData] = await Promise.all([
+            getMatchChecklists(currentUserId, matchId as string),
+            getMatchChecklistStats(currentUserId, matchId as string),
+          ]);
+          setTemplates(templatesData);
+          setStats(statsData);
+        } else {
+          const [templatesData, statsData] = await Promise.all([
+            getChecklistTemplates(),
+            getUserChecklistStats(currentUserId),
+          ]);
+          setTemplates(templatesData);
+          setStats(statsData);
+        }
       }
     } catch (error) {
       console.error('Error loading checklists:', error);
@@ -89,26 +120,43 @@ export default function ChecklistsScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checklists</Text>
+        <Text style={styles.headerTitle}>
+          {matchId && matchUserName ? `Checklists for ${matchUserName}` : 'Checklists'}
+        </Text>
         <Text style={styles.headerSubtitle}>
-          Stay organized and safe throughout your roommate search
+          {matchId
+            ? 'Complete these checklists for this potential roommate'
+            : 'Stay organized and safe throughout your roommate search'}
         </Text>
 
         {stats && (
           <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>
-                {stats.completedChecklists}/{stats.totalChecklists}
-              </Text>
-              <Text style={styles.statLabel}>Checklists</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>
-                {stats.completedItems}/{stats.totalItems}
-              </Text>
-              <Text style={styles.statLabel}>Items</Text>
-            </View>
+            {!matchId ? (
+              <>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>
+                    {stats.completedChecklists}/{stats.totalChecklists}
+                  </Text>
+                  <Text style={styles.statLabel}>Checklists</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>
+                    {stats.completedItems}/{stats.totalItems}
+                  </Text>
+                  <Text style={styles.statLabel}>Items</Text>
+                </View>
+              </>
+            ) : (
+              <View style={[styles.statBox, { flex: 1 }]}>
+                <Text style={styles.statNumber}>
+                  {stats.completedItems}/{stats.totalItems}
+                </Text>
+                <Text style={styles.statLabel}>
+                  {stats.progressPercentage}% Complete
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </LinearGradient>
@@ -129,7 +177,16 @@ export default function ChecklistsScreen() {
             <TouchableOpacity
               key={template.id}
               style={styles.checklistCard}
-              onPress={() => router.push(`/checklists/${template.id}`)}
+              onPress={() => {
+                if (matchId) {
+                  router.push({
+                    pathname: `/checklists/[id]`,
+                    params: { id: template.id, matchId: matchId as string },
+                  });
+                } else {
+                  router.push(`/checklists/${template.id}`);
+                }
+              }}
             >
               <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
                 <IconComponent size={28} color={color} />

@@ -21,7 +21,7 @@ import { useToast } from '../../hooks/useToast';
 
 export default function ChecklistDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, matchId } = useLocalSearchParams();
   const { showToast } = useToast();
   const [checklist, setChecklist] = useState<ChecklistTemplateWithItems | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function ChecklistDetailScreen() {
 
   useEffect(() => {
     loadChecklist();
-  }, [id]);
+  }, [id, matchId]);
 
   const loadChecklist = async () => {
     try {
@@ -37,7 +37,11 @@ export default function ChecklistDetailScreen() {
       setUserId(currentUserId);
 
       if (currentUserId && id) {
-        const data = await getChecklistWithItems(id as string, currentUserId);
+        const data = await getChecklistWithItems(
+          id as string,
+          currentUserId,
+          matchId as string | undefined
+        );
         setChecklist(data);
       }
     } catch (error) {
@@ -57,7 +61,14 @@ export default function ChecklistDetailScreen() {
     if (!userId) return;
 
     try {
-      await updateChecklistProgress(userId, itemId, isCompleted, selectedValue, notes);
+      await updateChecklistProgress(
+        userId,
+        itemId,
+        isCompleted,
+        selectedValue,
+        notes,
+        matchId as string | undefined
+      );
       await loadChecklist();
     } catch (error) {
       console.error('Error updating progress:', error);
