@@ -16,6 +16,7 @@ import { ArrowLeft, Square, CheckSquare } from 'lucide-react-native';
 import { supabase } from '../../services/supabase';
 import { setUserAgreementsAccepted } from '../../services/storage';
 import UserAgreements from '../../components/UserAgreements';
+import { validatePassword, getPasswordStrengthColor, getPasswordStrengthText } from '../../utils/passwordValidation';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -25,10 +26,18 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showAgreements, setShowAgreements] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const handleSignup = async () => {
     if (!firstName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      setPasswordError(passwordValidation.errors.join('\n'));
+      Alert.alert('Weak Password', passwordValidation.errors.join('\n'));
       return;
     }
 

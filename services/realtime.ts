@@ -4,15 +4,19 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 export type MessageCallback = (message: Message) => void;
 
-let messageSubscription: RealtimeChannel | null = null;
+const activeSubscriptions = new Map<string, RealtimeChannel>();
 
 export const subscribeToMessages = (matchId: string, callback: MessageCallback): (() => void) => {
-  if (messageSubscription) {
-    messageSubscription.unsubscribe();
+  const channelName = `messages:${matchId}`;
+
+  const existingSubscription = activeSubscriptions.get(channelName);
+  if (existingSubscription) {
+    existingSubscription.unsubscribe();
+    activeSubscriptions.delete(channelName);
   }
 
-  messageSubscription = supabase
-    .channel(`messages:${matchId}`)
+  const channel = supabase
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -35,12 +39,22 @@ export const subscribeToMessages = (matchId: string, callback: MessageCallback):
     )
     .subscribe();
 
+  activeSubscriptions.set(channelName, channel);
+
   return () => {
-    if (messageSubscription) {
-      messageSubscription.unsubscribe();
-      messageSubscription = null;
+    const sub = activeSubscriptions.get(channelName);
+    if (sub) {
+      sub.unsubscribe();
+      activeSubscriptions.delete(channelName);
     }
   };
+};
+
+export const cleanupAllSubscriptions = (): void => {
+  activeSubscriptions.forEach((channel) => {
+    channel.unsubscribe();
+  });
+  activeSubscriptions.clear();
 };
 
 export const markMessagesAsRead = async (matchId: string, userId: string, showReadReceipts: boolean = true): Promise<void> => {
@@ -60,23 +74,16 @@ export const markMessagesAsRead = async (matchId: string, userId: string, showRe
 
 export const getUnreadMessageCount = async (userId: string): Promise<number> => {
   try {
-    const { data: matches } = await supabase
-      .from('matches')
-      .select('id')
-      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+    const { data, error } = await supabase.rpc('get_unread_count', {
+      p_user_id: userId
+    });
 
-    if (!matches) return 0;
+    if (error) {
+      console.error('Error getting unread message count:', error);
+      return 0;
+    }
 
-    const matchIds = matches.map(m => m.id);
-
-    const { count } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .in('match_id', matchIds)
-      .neq('sender_id', userId)
-      .eq('is_read', false);
-
-    return count || 0;
+    return data || 0;
   } catch (error) {
     console.error('Error getting unread message count:', error);
     return 0;

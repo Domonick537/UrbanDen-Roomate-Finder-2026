@@ -518,6 +518,15 @@ export const getVerificationDocuments = async (): Promise<any[]> => {
   }
 };
 
+const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+const ALLOWED_DOCUMENT_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'application/pdf'
+];
+
 export const uploadVerificationDocument = async (
   userId: string,
   fileUri: string,
@@ -526,6 +535,19 @@ export const uploadVerificationDocument = async (
   try {
     const response = await fetch(fileUri);
     const blob = await response.blob();
+
+    // Validate file size
+    if (blob.size > MAX_DOCUMENT_SIZE) {
+      console.error(`File size exceeds 10MB limit: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+      return null;
+    }
+
+    // Validate file type
+    if (!ALLOWED_DOCUMENT_TYPES.includes(blob.type)) {
+      console.error(`Invalid file type: ${blob.type}`);
+      return null;
+    }
+
     const fileExt = fileName.split('.').pop();
     const filePath = `${userId}/${Date.now()}.${fileExt}`;
 
@@ -565,5 +587,91 @@ export const addVerificationDocument = async (
   } catch (error) {
     console.error('Error adding verification document:', error);
     throw error;
+  }
+};
+
+export const requestAccountDeletion = async (
+  userId: string,
+  reason?: string
+): Promise<{ success: boolean; scheduledDate?: Date; error?: string }> => {
+  try {
+    const { data, error } = await supabase.rpc('request_account_deletion', {
+      p_user_id: userId,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      console.error('Error requesting account deletion:', error);
+      return { success: false, error: error.message };
+    }
+
+    const scheduledDate = new Date();
+    scheduledDate.setDate(scheduledDate.getDate() + 30);
+
+    return { success: true, scheduledDate };
+  } catch (error) {
+    console.error('Error requesting account deletion:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to request account deletion',
+    };
+  }
+};
+
+export const cancelAccountDeletion = async (
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase.rpc('cancel_account_deletion', {
+      p_user_id: userId,
+    });
+
+    if (error) {
+      console.error('Error cancelling account deletion:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error cancelling account deletion:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel account deletion',
+    };
+  }
+};
+
+export const getAccountDeletionStatus = async (
+  userId: string
+): Promise<{
+  hasPendingDeletion: boolean;
+  scheduledDate?: Date;
+  reason?: string;
+}> => {
+  try {
+    const { data, error } = await supabase
+      .from('account_deletion_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error getting deletion status:', error);
+      return { hasPendingDeletion: false };
+    }
+
+    if (!data) {
+      return { hasPendingDeletion: false };
+    }
+
+    return {
+      hasPendingDeletion: true,
+      scheduledDate: new Date(data.scheduled_deletion_at),
+      reason: data.reason,
+    };
+  } catch (error) {
+    console.error('Error getting deletion status:', error);
+    return { hasPendingDeletion: false };
   }
 };

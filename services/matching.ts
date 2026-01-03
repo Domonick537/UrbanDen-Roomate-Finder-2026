@@ -87,106 +87,96 @@ export const calculateCompatibility = (user1: User, user2: User): number => {
   return Math.min(100, Math.round(score));
 };
 
-export const getPotentialMatches = async (currentUser: User): Promise<(User & { compatibility: number })[]> => {
-  const { data: allProfiles } = await supabase
-    .from('profiles')
-    .select('*, roommate_preferences(*)')
-    .neq('id', currentUser.id);
+const convertProfile = (profile: any): User => {
+  const prefs = profile.roommate_preferences?.[0] || {};
+  return {
+    id: profile.id,
+    firstName: profile.first_name,
+    age: profile.age,
+    gender: profile.gender,
+    occupation: profile.occupation,
+    bio: profile.bio,
+    email: profile.email || '',
+    phone: profile.phone,
+    photos: profile.photos || [],
+    preferences: {
+      genderPreference: prefs.gender_preference || 'any',
+      ageMin: prefs.age_min || 18,
+      ageMax: prefs.age_max || 65,
+      budgetMin: prefs.budget_min || 500,
+      budgetMax: prefs.budget_max || 2000,
+      location: {
+        city: prefs.location_city || '',
+        state: prefs.location_state || '',
+      },
+      moveInDate: prefs.move_in_date || 'flexible',
+      petPreference: prefs.pet_preference || 'flexible',
+      smokingPreference: prefs.smoking_preference || 'flexible',
+      drinkingPreference: prefs.drinking_preference || 'flexible',
+      cleanliness: prefs.cleanliness || 'flexible',
+      socialLevel: prefs.social_level || 'flexible',
+    },
+    isVerified: profile.is_verified,
+    isEmailVerified: profile.is_email_verified,
+    isPhoneVerified: profile.is_phone_verified,
+    showReadReceipts: profile.show_read_receipts ?? true,
+    createdAt: new Date(profile.created_at || Date.now()),
+    lastActive: new Date(profile.last_active || Date.now()),
+  };
+};
 
-  const { data: matches } = await supabase
+export const getPotentialMatches = async (
+  currentUser: User,
+  limit: number = 20,
+  offset: number = 0
+): Promise<(User & { compatibility: number })[]> => {
+  const { data: matchedUserIds } = await supabase
     .from('matches')
-    .select('*')
-    .or(`user_id_1.eq.${currentUser.id},user_id_2.eq.${currentUser.id}`);
+    .select('user_id_1, user_id_2')
+    .or(`user_id_1.eq.${currentUser.id},user_id_2.eq.${currentUser.id}`)
+    .limit(1000);
 
-  const { data: swipeActions } = await supabase
-    .from('swipe_actions')
-    .select('*')
-    .eq('user_id', currentUser.id);
-
-  const { data: blockedUsers } = await supabase
-    .from('blocked_users')
-    .select('blocked_id')
-    .eq('blocker_id', currentUser.id);
-
-  const { data: blockersOfMe } = await supabase
-    .from('blocked_users')
-    .select('blocker_id')
-    .eq('blocked_id', currentUser.id);
-
-  const matchedUserIds = new Set<string>();
-  (matches || []).forEach(match => {
-    if (match.user_id_1 === currentUser.id) matchedUserIds.add(match.user_id_2);
-    if (match.user_id_2 === currentUser.id) matchedUserIds.add(match.user_id_1);
+  const excludedIds = new Set<string>([currentUser.id]);
+  (matchedUserIds || []).forEach(match => {
+    if (match.user_id_1 === currentUser.id) excludedIds.add(match.user_id_2);
+    if (match.user_id_2 === currentUser.id) excludedIds.add(match.user_id_1);
   });
 
-  const swipedUserIds = new Set<string>();
-  (swipeActions || []).forEach(action => swipedUserIds.add(action.target_user_id));
+  const { data: swipedIds } = await supabase
+    .from('swipe_actions')
+    .select('target_user_id')
+    .eq('user_id', currentUser.id)
+    .limit(1000);
 
-  const blockedIds = new Set<string>();
-  (blockedUsers || []).forEach(b => blockedIds.add(b.blocked_id));
-  (blockersOfMe || []).forEach(b => blockedIds.add(b.blocker_id));
+  (swipedIds || []).forEach(action => excludedIds.add(action.target_user_id));
 
-  const convertProfile = (profile: any): User => {
-    const prefs = profile.roommate_preferences?.[0] || {};
-    return {
-      id: profile.id,
-      firstName: profile.first_name,
-      age: profile.age,
-      gender: profile.gender,
-      occupation: profile.occupation,
-      bio: profile.bio,
-      email: profile.email || '',
-      phone: profile.phone,
-      photos: profile.photos || [],
-      preferences: {
-        genderPreference: prefs.gender_preference || 'any',
-        ageMin: prefs.age_min || 18,
-        ageMax: prefs.age_max || 65,
-        budgetMin: prefs.budget_min || 500,
-        budgetMax: prefs.budget_max || 2000,
-        location: {
-          city: prefs.location_city || '',
-          state: prefs.location_state || '',
-        },
-        moveInDate: prefs.move_in_date || 'flexible',
-        petPreference: prefs.pet_preference || 'flexible',
-        smokingPreference: prefs.smoking_preference || 'flexible',
-        drinkingPreference: prefs.drinking_preference || 'flexible',
-        cleanliness: prefs.cleanliness || 'flexible',
-        socialLevel: prefs.social_level || 'flexible',
-      },
-      isVerified: profile.is_verified,
-      isEmailVerified: profile.is_email_verified,
-      isPhoneVerified: profile.is_phone_verified,
-      showReadReceipts: profile.show_read_receipts ?? true,
-      createdAt: new Date(profile.created_at || Date.now()),
-      lastActive: new Date(profile.last_active || Date.now()),
-    };
-  };
+  const { data: blockedIds } = await supabase
+    .from('blocked_users')
+    .select('blocked_id, blocker_id')
+    .or(`blocker_id.eq.${currentUser.id},blocked_id.eq.${currentUser.id}`)
+    .limit(1000);
 
-  const potentialMatches = (allProfiles || [])
-    .filter(profile => {
-      if (matchedUserIds.has(profile.id) || swipedUserIds.has(profile.id) || blockedIds.has(profile.id)) {
-        return false;
-      }
+  (blockedIds || []).forEach(block => {
+    excludedIds.add(block.blocked_id);
+    excludedIds.add(block.blocker_id);
+  });
 
-      const profilePrefs = profile.roommate_preferences?.[0];
-      if (!profilePrefs) return true;
+  let query = supabase
+    .from('profiles')
+    .select('*, roommate_preferences(*)')
+    .not('id', 'in', `(${Array.from(excludedIds).join(',')})`)
+    .gte('age', currentUser.preferences.ageMin)
+    .lte('age', currentUser.preferences.ageMax)
+    .order('last_active', { ascending: false })
+    .range(offset, offset + limit * 3 - 1);
 
-      const profileGenderPref = profilePrefs.gender_preference || 'any';
-      const profileAgeMin = profilePrefs.age_min || 18;
-      const profileAgeMax = profilePrefs.age_max || 65;
+  if (currentUser.preferences.genderPreference !== 'any') {
+    query = query.eq('gender', currentUser.preferences.genderPreference);
+  }
 
-      const genderMatch =
-        (currentUser.preferences.genderPreference === 'any' || currentUser.preferences.genderPreference === profile.gender) &&
-        (profileGenderPref === 'any' || profileGenderPref === currentUser.gender);
+  const { data: profiles } = await query;
 
-      const ageMatch =
-        (profile.age >= currentUser.preferences.ageMin && profile.age <= currentUser.preferences.ageMax) &&
-        (currentUser.age >= profileAgeMin && currentUser.age <= profileAgeMax);
-
-      return genderMatch && ageMatch;
-    })
+  const potentialMatches = (profiles || [])
     .map(profile => {
       const user = convertProfile(profile);
       return {
@@ -195,7 +185,7 @@ export const getPotentialMatches = async (currentUser: User): Promise<(User & { 
       };
     })
     .sort((a, b) => b.compatibility - a.compatibility)
-    .slice(0, 20);
+    .slice(0, limit);
 
   return potentialMatches;
 };
@@ -304,11 +294,18 @@ export const handleSwipe = async (
   return null;
 };
 
-export const getUserMatches = async (userId: string): Promise<Match[]> => {
+export const getUserMatches = async (
+  userId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<Match[]> => {
   const { data: matches } = await supabase
     .from('matches')
     .select('*')
-    .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+    .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`)
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   return (matches || []).map(match => ({
     id: match.id,

@@ -1,17 +1,57 @@
 import { supabase } from './supabase';
 import * as ImagePicker from 'expo-image-picker';
 
-export const uploadPhoto = async (userId: string, uri: string): Promise<string | null> => {
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_PHOTOS_PER_USER = 6;
+
+interface UploadResult {
+  success: boolean;
+  url?: string;
+  error?: string;
+}
+
+export const validateImageFile = async (uri: string): Promise<{ valid: boolean; error?: string }> => {
   try {
     const response = await fetch(uri);
     const blob = await response.blob();
-    const fileExt = uri.split('.').pop() || 'jpg';
+
+    if (blob.size > MAX_FILE_SIZE) {
+      return {
+        valid: false,
+        error: `File size exceeds 5MB limit. Your file is ${(blob.size / 1024 / 1024).toFixed(2)}MB.`
+      };
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(blob.type)) {
+      return {
+        valid: false,
+        error: `Invalid file type. Only JPEG, PNG, and WebP images are allowed.`
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, error: 'Failed to validate image file.' };
+  }
+};
+
+export const uploadPhoto = async (userId: string, uri: string): Promise<UploadResult> => {
+  try {
+    const validation = await validateImageFile(uri);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
     const { data, error } = await supabase.storage
       .from('profile-photos')
       .upload(fileName, blob, {
-        contentType: `image/${fileExt}`,
+        contentType: blob.type,
         upsert: false,
       });
 
@@ -21,10 +61,10 @@ export const uploadPhoto = async (userId: string, uri: string): Promise<string |
       .from('profile-photos')
       .getPublicUrl(fileName);
 
-    return urlData.publicUrl;
+    return { success: true, url: urlData.publicUrl };
   } catch (error) {
     console.error('Photo upload error:', error);
-    return null;
+    return { success: false, error: 'Failed to upload photo. Please try again.' };
   }
 };
 
