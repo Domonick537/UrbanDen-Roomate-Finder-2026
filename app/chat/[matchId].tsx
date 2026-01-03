@@ -18,9 +18,11 @@ import { getUserMatches } from '../../services/matching';
 import { subscribeToMessages, markMessagesAsRead } from '../../services/realtime';
 import { supabase } from '../../services/supabase';
 import { User, Message, ICE_BREAKERS } from '../../types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
@@ -147,17 +149,17 @@ export default function ChatScreen() {
 
     return (
       <View style={[styles.messageContainer, isMine ? styles.myMessage : styles.theirMessage]}>
-        <View style={[styles.messageBubble, isMine ? styles.myBubble : styles.theirBubble]}>
-          <Text style={[styles.messageText, isMine ? styles.myText : styles.theirText]}>
+        <View style={[styles.messageBubble, isMine ? [styles.myBubble, { backgroundColor: theme.colors.primary }] : [styles.theirBubble, { backgroundColor: theme.colors.card }]]}>
+          <Text style={[styles.messageText, isMine ? styles.myText : [styles.theirText, { color: theme.colors.text }]]}>
             {item.content}
           </Text>
         </View>
         <View style={styles.messageFooter}>
-          <Text style={styles.timestamp}>
+          <Text style={[styles.timestamp, { color: theme.colors.textTertiary }]}>
             {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
           {showReadStatus && (
-            <Text style={styles.readReceipt}> • Read</Text>
+            <Text style={[styles.readReceipt, { color: theme.colors.textTertiary }]}> • Read</Text>
           )}
         </View>
       </View>
@@ -167,17 +169,17 @@ export default function ChatScreen() {
   const renderIceBreaker = (iceBreaker: string, index: number) => (
     <TouchableOpacity
       key={index}
-      style={styles.iceBreakerButton}
+      style={[styles.iceBreakerButton, { backgroundColor: theme.colors.primaryLight, borderColor: theme.colors.primaryBorder }]}
       onPress={() => handleSend(iceBreaker)}
     >
-      <Text style={styles.iceBreakerText}>{iceBreaker}</Text>
+      <Text style={[styles.iceBreakerText, { color: theme.colors.primary }]}>{iceBreaker}</Text>
     </TouchableOpacity>
   );
 
   if (!currentUser || !otherUser) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text }}>Loading...</Text>
       </View>
     );
   }
@@ -188,10 +190,10 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft size={24} color="#111827" />
+            <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerCenter}
@@ -200,20 +202,20 @@ export default function ChatScreen() {
             {otherUser.profilePicture ? (
               <Image source={{ uri: otherUser.profilePicture }} style={styles.headerImage} />
             ) : (
-              <View style={[styles.headerImage, styles.placeholderImage]}>
-                <UserIcon size={16} color="#9CA3AF" />
+              <View style={[styles.headerImage, styles.placeholderImage, { backgroundColor: theme.colors.borderLight }]}>
+                <UserIcon size={16} color={theme.colors.textTertiary} />
               </View>
             )}
-            <Text style={styles.headerTitle}>{otherUser.firstName}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{otherUser.firstName}</Text>
           </TouchableOpacity>
           <View style={{ width: 24 }} />
         </View>
 
         {messages.length === 0 && (
-          <View style={styles.iceBreakersContainer}>
+          <View style={[styles.iceBreakersContainer, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
             <View style={styles.iceBreakersHeader}>
-              <Smile size={20} color="#4F46E5" />
-              <Text style={styles.iceBreakersTitle}>Ice Breakers</Text>
+              <Smile size={20} color={theme.colors.primary} />
+              <Text style={[styles.iceBreakersTitle, { color: theme.colors.primary }]}>Ice Breakers</Text>
             </View>
             <ScrollView
               horizontal
@@ -234,17 +236,18 @@ export default function ChatScreen() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }]}
             placeholder="Type a message..."
+            placeholderTextColor={theme.colors.textTertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
             maxLength={500}
           />
           <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            style={[styles.sendButton, { backgroundColor: inputText.trim() ? theme.colors.primary : theme.colors.borderLight }]}
             onPress={() => handleSend()}
             disabled={!inputText.trim()}
           >
