@@ -42,6 +42,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       isVerified: profile.is_verified,
       isEmailVerified: profile.is_email_verified,
       isPhoneVerified: profile.is_phone_verified,
+      showReadReceipts: profile.show_read_receipts ?? true,
       createdAt: new Date(profile.created_at),
       lastActive: new Date(profile.last_active),
       photos: profile.photos || [],
@@ -106,6 +107,7 @@ export const getAllUsers = async (): Promise<User[]> => {
           isVerified: profile.is_verified,
           isEmailVerified: profile.is_email_verified,
           isPhoneVerified: profile.is_phone_verified,
+          showReadReceipts: profile.show_read_receipts ?? true,
           createdAt: new Date(profile.created_at),
           lastActive: new Date(profile.last_active),
           photos: profile.photos || [],
@@ -150,6 +152,7 @@ export const addUser = async (user: User): Promise<void> => {
         is_verified: user.isVerified,
         is_email_verified: user.isEmailVerified,
         is_phone_verified: user.isPhoneVerified,
+        show_read_receipts: user.showReadReceipts,
         photos: user.photos,
       })
       .select()
@@ -197,6 +200,7 @@ export const updateUser = async (user: User): Promise<void> => {
         is_verified: user.isVerified,
         is_email_verified: user.isEmailVerified,
         is_phone_verified: user.isPhoneVerified,
+        show_read_receipts: user.showReadReceipts,
         photos: user.photos,
         last_active: new Date().toISOString(),
       })

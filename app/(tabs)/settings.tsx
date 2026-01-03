@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,15 +20,40 @@ import {
   LogOut,
   Trash2,
   Download,
+  Eye,
 } from 'lucide-react-native';
-import { clearAllData, setCurrentUser } from '../../services/storage';
+import { clearAllData, setCurrentUser, getCurrentUser, updateUser } from '../../services/storage';
 import { exportUserData, deleteUserAccount } from '../../services/dataExport';
 import { supabase } from '../../services/supabase';
+import { User } from '../../types';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const [currentUserData, setCurrentUserData] = useState<User | null>(null);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [locationServices, setLocationServices] = useState(true);
+  const [readReceipts, setReadReceipts] = useState(true);
+
+  useEffect(() => {
+    loadUserSettings();
+  }, []);
+
+  const loadUserSettings = async () => {
+    const user = await getCurrentUser();
+    if (user) {
+      setCurrentUserData(user);
+      setReadReceipts(user.showReadReceipts);
+    }
+  };
+
+  const handleToggleReadReceipts = async (value: boolean) => {
+    setReadReceipts(value);
+    if (currentUserData) {
+      const updatedUser = { ...currentUserData, showReadReceipts: value };
+      await updateUser(updatedUser);
+      setCurrentUserData(updatedUser);
+    }
+  };
 
   const handleExportData = async () => {
     const exportedData = await exportUserData();
@@ -154,6 +179,22 @@ export default function SettingsScreen() {
             onValueChange={setPushNotifications}
             trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
             thumbColor={pushNotifications ? '#4F46E5' : '#9CA3AF'}
+          />
+        </View>
+
+        <View style={styles.settingItem}>
+          <View style={styles.settingIcon}>
+            <Eye size={20} color="#4F46E5" />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingTitle}>Read Receipts</Text>
+            <Text style={styles.settingSubtitle}>Let others know when you've read their messages</Text>
+          </View>
+          <Switch
+            value={readReceipts}
+            onValueChange={handleToggleReadReceipts}
+            trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
+            thumbColor={readReceipts ? '#4F46E5' : '#9CA3AF'}
           />
         </View>
 

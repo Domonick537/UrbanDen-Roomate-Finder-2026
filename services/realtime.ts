@@ -43,7 +43,9 @@ export const subscribeToMessages = (matchId: string, callback: MessageCallback):
   };
 };
 
-export const markMessagesAsRead = async (matchId: string, userId: string): Promise<void> => {
+export const markMessagesAsRead = async (matchId: string, userId: string, showReadReceipts: boolean = true): Promise<void> => {
+  if (!showReadReceipts) return;
+
   try {
     await supabase
       .from('messages')

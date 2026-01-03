@@ -48,7 +48,7 @@ export default function ChatScreen() {
       }, 100);
     });
 
-    markMessagesAsRead(matchId, currentUser.id);
+    markMessagesAsRead(matchId, currentUser.id, currentUser.showReadReceipts);
 
     return () => {
       unsubscribe();
@@ -104,6 +104,7 @@ export default function ChatScreen() {
         isVerified: otherProfile.is_verified,
         isEmailVerified: otherProfile.is_email_verified,
         isPhoneVerified: otherProfile.is_phone_verified,
+        showReadReceipts: otherProfile.show_read_receipts ?? true,
         createdAt: new Date(otherProfile.created_at || Date.now()),
         lastActive: new Date(otherProfile.last_active || Date.now()),
       };
@@ -142,6 +143,7 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMine = item.senderId === currentUser?.id;
+    const showReadStatus = isMine && otherUser?.showReadReceipts && item.isRead;
 
     return (
       <View style={[styles.messageContainer, isMine ? styles.myMessage : styles.theirMessage]}>
@@ -150,9 +152,14 @@ export default function ChatScreen() {
             {item.content}
           </Text>
         </View>
-        <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        <View style={styles.messageFooter}>
+          <Text style={styles.timestamp}>
+            {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          {showReadStatus && (
+            <Text style={styles.readReceipt}> • Read</Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -357,10 +364,18 @@ const styles = StyleSheet.create({
   theirText: {
     color: '#111827',
   },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   timestamp: {
     fontSize: 12,
     color: '#9CA3AF',
-    marginTop: 4,
+  },
+  readReceipt: {
+    fontSize: 12,
+    color: '#9CA3AF',
   },
   inputContainer: {
     flexDirection: 'row',

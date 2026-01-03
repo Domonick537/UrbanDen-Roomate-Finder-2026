@@ -11,6 +11,7 @@ export interface User {
   isVerified: boolean;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
+  showReadReceipts: boolean;
   createdAt: Date;
   lastActive: Date;
   preferences: RoommatePreferences;
