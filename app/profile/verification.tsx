@@ -6,11 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, CheckCircle, Clock, XCircle, Upload, Camera, Lock } from 'lucide-react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { getCurrentUser, getVerificationDocuments, addVerificationDocument } from '../../services/storage';
+import { ArrowLeft, CheckCircle, Clock, XCircle, Upload, Camera, Lock, Image as ImageIcon } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { getCurrentUser, getVerificationDocuments, uploadVerificationDocument, addVerificationDocument } from '../../services/storage';
 import { VerificationDocument } from '../../types';
 
 export default function VerificationScreen() {
@@ -33,36 +34,104 @@ export default function VerificationScreen() {
     setDocuments(docs);
   };
 
-  const handleUpload = async () => {
+  const handleTakePhoto = async () => {
     try {
-      setUploading(true);
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*',
-        copyToCacheDirectory: true,
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera access is needed to take a photo of your ID.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
       });
 
-      if (result.assets && result.assets.length > 0) {
-        const user = await getCurrentUser();
-        if (!user) return;
-
-        const newDoc: VerificationDocument = {
-          id: `doc_${Date.now()}`,
-          userId: user.id,
-          type: 'government-id',
-          imageUrl: result.assets[0].uri,
-          status: 'pending',
-          submittedAt: new Date(),
-        };
-
-        await addVerificationDocument(newDoc);
-        setDocuments([...documents, newDoc]);
-
-        Alert.alert('Success', 'Document submitted successfully! Our team will review it shortly.');
+      if (!result.canceled && result.assets[0]) {
+        await uploadDocument(result.assets[0].uri, 'photo.jpg');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload document');
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Photo library access is needed to select an ID photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadDocument(result.assets[0].uri, 'document.jpg');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const uploadDocument = async (uri: string, fileName: string) => {
+    try {
+      setUploading(true);
+      const user = await getCurrentUser();
+      if (!user) {
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+
+      const filePath = await uploadVerificationDocument(user.id, uri, fileName);
+      if (!filePath) {
+        Alert.alert('Error', 'Failed to upload document. Please try again.');
+        return;
+      }
+
+      await addVerificationDocument(user.id, filePath, 'government-id');
+
+      await loadVerificationStatus();
+
+      Alert.alert(
+        'Success!',
+        'Your ID has been submitted for verification. Our team will review it within 24-48 hours.'
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit document. Please try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const showUploadOptions = () => {
+    if (Platform.OS === 'web') {
+      handlePickImage();
+    } else {
+      Alert.alert(
+        'Upload ID Photo',
+        'Choose how you want to submit your government ID',
+        [
+          {
+            text: 'Take Photo',
+            onPress: handleTakePhoto,
+          },
+          {
+            text: 'Choose from Library',
+            onPress: handlePickImage,
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
     }
   };
 
@@ -157,16 +226,18 @@ export default function VerificationScreen() {
             kept secure and private.
           </Text>
 
-          <TouchableOpacity
-            style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-            onPress={handleUpload}
-            disabled={uploading}
-          >
-            <Upload size={24} color="#4F46E5" />
-            <Text style={styles.uploadButtonText}>
-              {uploading ? 'Uploading...' : 'Upload Document'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.uploadOptions}>
+            <TouchableOpacity
+              style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
+              onPress={showUploadOptions}
+              disabled={uploading}
+            >
+              <Camera size={24} color="#4F46E5" />
+              <Text style={styles.uploadButtonText}>
+                {uploading ? 'Uploading...' : 'Take Photo or Upload'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -176,13 +247,18 @@ export default function VerificationScreen() {
           {documents.map(doc => (
             <View key={doc.id} style={styles.documentCard}>
               <View style={styles.documentIcon}>
-                <Camera size={24} color="#6B7280" />
+                <ImageIcon size={24} color="#6B7280" />
               </View>
               <View style={styles.documentContent}>
                 <Text style={styles.documentTitle}>Government ID</Text>
                 <Text style={styles.documentDate}>
                   Submitted {doc.submittedAt.toLocaleDateString()}
                 </Text>
+                {doc.status === 'rejected' && doc.rejectionReason && (
+                  <Text style={styles.rejectionReason}>
+                    Reason: {doc.rejectionReason}
+                  </Text>
+                )}
               </View>
               <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(doc.status)}20` }]}>
                 <Text style={[styles.statusBadgeText, { color: getStatusColor(doc.status) }]}>
@@ -277,17 +353,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
   },
+  uploadOptions: {
+    gap: 12,
+  },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#4F46E5',
     padding: 20,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#4F46E5',
-    borderStyle: 'dashed',
   },
   uploadButtonDisabled: {
     opacity: 0.5,
@@ -295,7 +371,7 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: '#FFFFFF',
   },
   documentCard: {
     flexDirection: 'row',
@@ -326,6 +402,12 @@ const styles = StyleSheet.create({
   documentDate: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  rejectionReason: {
+    fontSize: 13,
+    color: '#EF4444',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   statusBadge: {
     paddingHorizontal: 12,

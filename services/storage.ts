@@ -489,9 +489,81 @@ export const deleteRoommateAgreement = async (id: string): Promise<void> => {
 };
 
 export const getVerificationDocuments = async (): Promise<any[]> => {
-  return [];
+  try {
+    const user = await getCurrentUser();
+    if (!user) return [];
+
+    const { data } = await supabase
+      .from('verification_documents')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('submitted_at', { ascending: false });
+
+    if (!data) return [];
+
+    return data.map((doc: any) => ({
+      id: doc.id,
+      userId: doc.user_id,
+      type: doc.document_type,
+      imageUrl: doc.file_path,
+      status: doc.status,
+      submittedAt: new Date(doc.submitted_at),
+      reviewedAt: doc.reviewed_at ? new Date(doc.reviewed_at) : undefined,
+      reviewedBy: doc.reviewed_by,
+      rejectionReason: doc.rejection_reason,
+    }));
+  } catch (error) {
+    console.error('Error getting verification documents:', error);
+    return [];
+  }
 };
 
-export const addVerificationDocument = async (doc: any): Promise<void> => {
-  console.log('Verification documents not yet implemented in database');
+export const uploadVerificationDocument = async (
+  userId: string,
+  fileUri: string,
+  fileName: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch(fileUri);
+    const blob = await response.blob();
+    const fileExt = fileName.split('.').pop();
+    const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('verification-documents')
+      .upload(filePath, blob, {
+        contentType: blob.type,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Storage upload error:', error);
+      return null;
+    }
+
+    return data.path;
+  } catch (error) {
+    console.error('Error uploading verification document:', error);
+    return null;
+  }
+};
+
+export const addVerificationDocument = async (
+  userId: string,
+  filePath: string,
+  documentType: string = 'government-id'
+): Promise<void> => {
+  try {
+    await supabase
+      .from('verification_documents')
+      .insert({
+        user_id: userId,
+        document_type: documentType,
+        file_path: filePath,
+        status: 'pending',
+      });
+  } catch (error) {
+    console.error('Error adding verification document:', error);
+    throw error;
+  }
 };
