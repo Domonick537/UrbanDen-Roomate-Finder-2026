@@ -8,9 +8,10 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, FileText, Plus, CreditCard as Edit, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, FileText, Plus, CreditCard as Edit, Trash2, Printer } from 'lucide-react-native';
 import { getRoommateAgreements, addRoommateAgreement, updateRoommateAgreement, deleteRoommateAgreement } from '../../services/storage';
 import { agreementTemplates } from '../../services/mockData';
 import { RoommateAgreement } from '../../types';
@@ -22,6 +23,8 @@ export default function AgreementsScreen() {
   const [editingAgreement, setEditingAgreement] = useState<RoommateAgreement | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printingAgreement, setPrintingAgreement] = useState<RoommateAgreement | null>(null);
 
   useEffect(() => {
     loadAgreements();
@@ -105,6 +108,18 @@ export default function AgreementsScreen() {
     Alert.alert('Success', 'Template copied to your agreements');
   };
 
+  const handlePrint = (agreement: RoommateAgreement) => {
+    if (Platform.OS === 'web') {
+      setPrintingAgreement(agreement);
+      setPrintModalVisible(true);
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    } else {
+      Alert.alert('Print', 'Printing is available on web. On mobile, you can copy the content and print it from your device.');
+    }
+  };
+
   const renderAgreementCard = (agreement: RoommateAgreement) => (
     <View key={agreement.id} style={styles.agreementCard}>
       <View style={styles.agreementIcon}>
@@ -125,6 +140,12 @@ export default function AgreementsScreen() {
         </Text>
       </View>
       <View style={styles.agreementActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handlePrint(agreement)}
+        >
+          <Printer size={20} color="#10B981" />
+        </TouchableOpacity>
         {agreement.isTemplate ? (
           <TouchableOpacity
             style={styles.actionButton}
@@ -231,6 +252,48 @@ export default function AgreementsScreen() {
               />
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={printModalVisible}
+        transparent={true}
+        onRequestClose={() => setPrintModalVisible(false)}
+      >
+        <View style={styles.printContainer}>
+          <View style={styles.printContent}>
+            <View style={styles.printHeader}>
+              <Text style={styles.printTitle}>{printingAgreement?.title}</Text>
+              <Text style={styles.printDate}>
+                {new Date().toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+            <View style={styles.printBody}>
+              <Text style={styles.printText}>{printingAgreement?.content}</Text>
+            </View>
+            <View style={styles.printFooter}>
+              <View style={styles.signatureSection}>
+                <View style={styles.signatureLine} />
+                <Text style={styles.signatureLabel}>Roommate 1 Signature</Text>
+                <Text style={styles.signatureDate}>Date: _________________</Text>
+              </View>
+              <View style={styles.signatureSection}>
+                <View style={styles.signatureLine} />
+                <Text style={styles.signatureLabel}>Roommate 2 Signature</Text>
+                <Text style={styles.signatureDate}>Date: _________________</Text>
+              </View>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.printCloseButton}
+            onPress={() => setPrintModalVisible(false)}
+          >
+            <Text style={styles.printCloseText}>Close</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -411,5 +474,76 @@ const styles = StyleSheet.create({
   textArea: {
     height: 300,
     textAlignVertical: 'top',
+  },
+  printContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 40,
+  },
+  printContent: {
+    flex: 1,
+  },
+  printHeader: {
+    marginBottom: 32,
+    borderBottomWidth: 2,
+    borderBottomColor: '#111827',
+    paddingBottom: 16,
+  },
+  printTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  printDate: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  printBody: {
+    flex: 1,
+    marginBottom: 48,
+  },
+  printText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 24,
+    whiteSpace: 'pre-wrap',
+  },
+  printFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 40,
+    marginTop: 64,
+  },
+  signatureSection: {
+    flex: 1,
+  },
+  signatureLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#111827',
+    marginBottom: 8,
+    height: 40,
+  },
+  signatureLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  signatureDate: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  printCloseButton: {
+    backgroundColor: '#4F46E5',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  printCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

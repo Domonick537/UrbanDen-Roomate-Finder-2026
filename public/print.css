@@ -1,0 +1,27 @@
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-content,
+  .print-content * {
+    visibility: visible;
+  }
+
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+  }
+
+  button,
+  .print-close-button {
+    display: none !important;
+  }
+
+  @page {
+    margin: 1in;
+  }
+}
