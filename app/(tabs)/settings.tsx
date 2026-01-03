@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   Share,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -21,18 +22,24 @@ import {
   Trash2,
   Download,
   Eye,
+  Moon,
+  Sun,
+  Monitor,
 } from 'lucide-react-native';
 import { clearAllData, setCurrentUser, getCurrentUser, updateUser } from '../../services/storage';
 import { exportUserData, deleteUserAccount } from '../../services/dataExport';
 import { supabase } from '../../services/supabase';
 import { User } from '../../types';
+import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { theme, themeMode, setThemeMode } = useTheme();
   const [currentUserData, setCurrentUserData] = useState<User | null>(null);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [locationServices, setLocationServices] = useState(true);
   const [readReceipts, setReadReceipts] = useState(true);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     loadUserSettings();
@@ -109,10 +116,32 @@ export default function SettingsScreen() {
     );
   };
 
+  const getThemeIcon = () => {
+    switch (themeMode) {
+      case 'light':
+        return <Sun size={20} color={theme.colors.primary} />;
+      case 'dark':
+        return <Moon size={20} color={theme.colors.primary} />;
+      case 'auto':
+        return <Monitor size={20} color={theme.colors.primary} />;
+    }
+  };
+
+  const getThemeLabel = () => {
+    switch (themeMode) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      case 'auto':
+        return 'Auto';
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
       <LinearGradient
-        colors={['#4F46E5', '#6366F1']}
+        colors={theme.colors.gradient}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -122,183 +151,273 @@ export default function SettingsScreen() {
       </LinearGradient>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ACCOUNT</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>APPEARANCE</Text>
 
-        <TouchableOpacity style={styles.settingItem}>
-          <View style={styles.settingIcon}>
-            <UserIcon size={20} color="#4F46E5" />
+        <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card }]} onPress={() => setShowThemeModal(true)}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            {getThemeIcon()}
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Edit Profile</Text>
-            <Text style={styles.settingSubtitle}>Update your personal information</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.settingItem}
-          onPress={() => router.push('/profile/verification')}
-        >
-          <View style={styles.settingIcon}>
-            <Shield size={20} color="#4F46E5" />
-          </View>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Identity Verification</Text>
-            <Text style={styles.settingSubtitle}>Verify your identity for safety</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.settingItem}
-          onPress={() => router.push('/profile/agreements')}
-        >
-          <View style={styles.settingIcon}>
-            <FileText size={20} color="#4F46E5" />
-          </View>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Roommate Agreements</Text>
-            <Text style={styles.settingSubtitle}>View and manage agreement templates</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Theme</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+              {getThemeLabel()} mode
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>PRIVACY & SECURITY</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>ACCOUNT</Text>
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingIcon}>
-            <Bell size={20} color="#4F46E5" />
+        <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <UserIcon size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Push Notifications</Text>
-            <Text style={styles.settingSubtitle}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Edit Profile</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Update your personal information</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
+          onPress={() => router.push('/profile/verification')}
+        >
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Shield size={20} color={theme.colors.primary} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Identity Verification</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Verify your identity for safety</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
+          onPress={() => router.push('/profile/agreements')}
+        >
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <FileText size={20} color={theme.colors.primary} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Roommate Agreements</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>View and manage agreement templates</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>PRIVACY & SECURITY</Text>
+
+        <View style={[styles.settingItem, { backgroundColor: theme.colors.card }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Bell size={20} color={theme.colors.primary} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Push Notifications</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
               Receive notifications about matches and messages
             </Text>
           </View>
           <Switch
             value={pushNotifications}
             onValueChange={setPushNotifications}
-            trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
-            thumbColor={pushNotifications ? '#4F46E5' : '#9CA3AF'}
+            trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+            thumbColor={pushNotifications ? theme.colors.primary : theme.colors.textTertiary}
           />
         </View>
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingIcon}>
-            <Eye size={20} color="#4F46E5" />
+        <View style={[styles.settingItem, { backgroundColor: theme.colors.card }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Eye size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Read Receipts</Text>
-            <Text style={styles.settingSubtitle}>Let others know when you've read their messages</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Read Receipts</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Let others know when you've read their messages</Text>
           </View>
           <Switch
             value={readReceipts}
             onValueChange={handleToggleReadReceipts}
-            trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
-            thumbColor={readReceipts ? '#4F46E5' : '#9CA3AF'}
+            trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+            thumbColor={readReceipts ? theme.colors.primary : theme.colors.textTertiary}
           />
         </View>
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingIcon}>
-            <Shield size={20} color="#4F46E5" />
+        <View style={[styles.settingItem, { backgroundColor: theme.colors.card }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Shield size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Location Services</Text>
-            <Text style={styles.settingSubtitle}>Allow location access for better matches</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Location Services</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Allow location access for better matches</Text>
           </View>
           <Switch
             value={locationServices}
             onValueChange={setLocationServices}
-            trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
-            thumbColor={locationServices ? '#4F46E5' : '#9CA3AF'}
+            trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+            thumbColor={locationServices ? theme.colors.primary : theme.colors.textTertiary}
           />
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>DATA & PRIVACY</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>DATA & PRIVACY</Text>
 
-        <TouchableOpacity style={styles.settingItem} onPress={handleExportData}>
-          <View style={styles.settingIcon}>
-            <Download size={20} color="#4F46E5" />
+        <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card }]} onPress={handleExportData}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Download size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Export Data</Text>
-            <Text style={styles.settingSubtitle}>Download your personal data</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Export Data</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Download your personal data</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.settingItem}
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
           onPress={() => router.push('/(auth)/terms')}
         >
-          <View style={styles.settingIcon}>
-            <FileText size={20} color="#4F46E5" />
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <FileText size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Terms of Service</Text>
-            <Text style={styles.settingSubtitle}>Review our terms of service</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Terms of Service</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Review our terms of service</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.settingItem}
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
           onPress={() => router.push('/(auth)/privacy')}
         >
-          <View style={styles.settingIcon}>
-            <Shield size={20} color="#4F46E5" />
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <Shield size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Privacy Policy</Text>
-            <Text style={styles.settingSubtitle}>Review our privacy policy</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Review our privacy policy</Text>
           </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>SUPPORT</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>SUPPORT</Text>
 
         <TouchableOpacity
-          style={styles.settingItem}
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
           onPress={() =>
             Alert.alert('Help & Support', 'Contact support at help@urbanden.com')
           }
         >
-          <View style={styles.settingIcon}>
-            <HelpCircle size={20} color="#4F46E5" />
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <HelpCircle size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Help & Support</Text>
-            <Text style={styles.settingSubtitle}>Get help with using UrbanDen</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Help & Support</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Get help with using UrbanDen</Text>
           </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ACCOUNT ACTIONS</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>ACCOUNT ACTIONS</Text>
 
-        <TouchableOpacity style={styles.dangerItem} onPress={handleSignOut}>
-          <View style={styles.dangerIcon}>
-            <LogOut size={20} color="#EF4444" />
+        <TouchableOpacity style={[styles.dangerItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.errorLight }]} onPress={handleSignOut}>
+          <View style={[styles.dangerIcon, { backgroundColor: theme.colors.errorLight }]}>
+            <LogOut size={20} color={theme.colors.error} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.dangerTitle}>Sign Out</Text>
-            <Text style={styles.settingSubtitle}>Sign out of your account</Text>
+            <Text style={[styles.dangerTitle, { color: theme.colors.error }]}>Sign Out</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Sign out of your account</Text>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.dangerItem} onPress={handleDeleteAccount}>
-          <View style={styles.dangerIcon}>
-            <Trash2 size={20} color="#EF4444" />
+        <TouchableOpacity style={[styles.dangerItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.errorLight }]} onPress={handleDeleteAccount}>
+          <View style={[styles.dangerIcon, { backgroundColor: theme.colors.errorLight }]}>
+            <Trash2 size={20} color={theme.colors.error} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.dangerTitle}>Delete Account</Text>
-            <Text style={styles.settingSubtitle}>
+            <Text style={[styles.dangerTitle, { color: theme.colors.error }]}>Delete Account</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
               Permanently delete your account and data
             </Text>
           </View>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showThemeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowThemeModal(false)}
+        >
+          <View style={[styles.themeModal, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.themeModalTitle, { color: theme.colors.text }]}>Choose Theme</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === 'light' && { backgroundColor: theme.colors.primaryLight },
+              ]}
+              onPress={() => {
+                setThemeMode('light');
+                setShowThemeModal(false);
+              }}
+            >
+              <Sun size={24} color={themeMode === 'light' ? theme.colors.primary : theme.colors.textSecondary} />
+              <View style={styles.themeOptionText}>
+                <Text style={[styles.themeOptionTitle, { color: theme.colors.text }]}>Light</Text>
+                <Text style={[styles.themeOptionSubtitle, { color: theme.colors.textSecondary }]}>
+                  Always use light mode
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === 'dark' && { backgroundColor: theme.colors.primaryLight },
+              ]}
+              onPress={() => {
+                setThemeMode('dark');
+                setShowThemeModal(false);
+              }}
+            >
+              <Moon size={24} color={themeMode === 'dark' ? theme.colors.primary : theme.colors.textSecondary} />
+              <View style={styles.themeOptionText}>
+                <Text style={[styles.themeOptionTitle, { color: theme.colors.text }]}>Dark</Text>
+                <Text style={[styles.themeOptionSubtitle, { color: theme.colors.textSecondary }]}>
+                  Always use dark mode
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === 'auto' && { backgroundColor: theme.colors.primaryLight },
+              ]}
+              onPress={() => {
+                setThemeMode('auto');
+                setShowThemeModal(false);
+              }}
+            >
+              <Monitor size={24} color={themeMode === 'auto' ? theme.colors.primary : theme.colors.textSecondary} />
+              <View style={styles.themeOptionText}>
+                <Text style={[styles.themeOptionTitle, { color: theme.colors.text }]}>Auto</Text>
+                <Text style={[styles.themeOptionSubtitle, { color: theme.colors.textSecondary }]}>
+                  Match system settings
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -306,7 +425,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   content: {
     paddingBottom: 40,
@@ -403,7 +521,49 @@ const styles = StyleSheet.create({
   dangerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
     marginBottom: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  themeModal: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  themeModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  themeOptionText: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  themeOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  themeOptionSubtitle: {
+    fontSize: 14,
   },
 });
