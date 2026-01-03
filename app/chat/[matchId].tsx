@@ -123,7 +123,7 @@ export default function ChatScreen() {
     if (!messageText || !currentUser) return;
 
     const newMessage: Message = {
-      id: `msg_${Date.now()}`,
+      id: crypto.randomUUID(),
       matchId,
       senderId: currentUser.id,
       content: messageText,
