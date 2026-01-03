@@ -51,6 +51,8 @@ export default function ViewProfileScreen() {
       profilePicture: profile.photos?.[0],
       preferences: {
         genderPreference: prefs.gender_preference || 'any',
+        ageMin: prefs.age_min || 18,
+        ageMax: prefs.age_max || 65,
         budgetMin: prefs.budget_min || 500,
         budgetMax: prefs.budget_max || 2000,
         location: {

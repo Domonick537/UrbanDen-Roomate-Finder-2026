@@ -9,9 +9,12 @@ import {
 } from 'react-native';
 import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface FilterOptions {
   genderPreference: 'any' | 'male' | 'female';
+  ageMin: number;
+  ageMax: number;
   petPreference: string;
   smokingPreference: string;
   minCompatibility: number;
@@ -30,6 +33,7 @@ export default function FiltersModal({
   onApplyFilters,
   initialFilters,
 }: FiltersModalProps) {
+  const { theme } = useTheme();
   const [filters, setFilters] = useState<FilterOptions>(initialFilters);
 
   const handleApply = () => {
@@ -40,6 +44,8 @@ export default function FiltersModal({
   const handleReset = () => {
     const defaultFilters: FilterOptions = {
       genderPreference: 'any',
+      ageMin: 18,
+      ageMax: 65,
       petPreference: 'any',
       smokingPreference: 'any',
       minCompatibility: 0,
@@ -49,21 +55,21 @@ export default function FiltersModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
           <View style={styles.headerLeft}>
-            <SlidersHorizontal size={24} color="#111827" />
-            <Text style={styles.title}>Filters</Text>
+            <SlidersHorizontal size={24} color={theme.colors.text} />
+            <Text style={[styles.title, { color: theme.colors.text }]}>Filters</Text>
           </View>
           <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#111827" />
+            <X size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Gender Preference</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Gender Preference</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <Picker
                 selectedValue={filters.genderPreference}
                 onValueChange={(value) =>
@@ -79,8 +85,46 @@ export default function FiltersModal({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pet Preference</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Age Range</Text>
+            <View style={styles.ageRangeContainer}>
+              <View style={styles.agePickerWrapper}>
+                <Text style={[styles.ageLabel, { color: theme.colors.textSecondary }]}>Min Age</Text>
+                <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                  <Picker
+                    selectedValue={filters.ageMin}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, ageMin: value })
+                    }
+                    style={styles.picker}
+                  >
+                    {Array.from({ length: 65 - 18 + 1 }, (_, i) => i + 18).map(age => (
+                      <Picker.Item key={age} label={`${age}`} value={age} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              <View style={styles.agePickerWrapper}>
+                <Text style={[styles.ageLabel, { color: theme.colors.textSecondary }]}>Max Age</Text>
+                <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                  <Picker
+                    selectedValue={filters.ageMax}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, ageMax: value })
+                    }
+                    style={styles.picker}
+                  >
+                    {Array.from({ length: 65 - 18 + 1 }, (_, i) => i + 18).map(age => (
+                      <Picker.Item key={age} label={`${age}`} value={age} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Pet Preference</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <Picker
                 selectedValue={filters.petPreference}
                 onValueChange={(value) =>
@@ -97,8 +141,8 @@ export default function FiltersModal({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Smoking Preference</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Smoking Preference</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <Picker
                 selectedValue={filters.smokingPreference}
                 onValueChange={(value) =>
@@ -114,8 +158,8 @@ export default function FiltersModal({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Minimum Compatibility</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Minimum Compatibility</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <Picker
                 selectedValue={filters.minCompatibility}
                 onValueChange={(value) =>
@@ -133,11 +177,11 @@ export default function FiltersModal({
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-            <Text style={styles.resetButtonText}>Reset</Text>
+        <View style={[styles.footer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+          <TouchableOpacity style={[styles.resetButton, { borderColor: theme.colors.border }]} onPress={handleReset}>
+            <Text style={[styles.resetButtonText, { color: theme.colors.textSecondary }]}>Reset</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+          <TouchableOpacity style={[styles.applyButton, { backgroundColor: theme.colors.success }]} onPress={handleApply}>
             <Text style={styles.applyButtonText}>Apply Filters</Text>
           </TouchableOpacity>
         </View>
@@ -193,6 +237,18 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
+  },
+  ageRangeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  agePickerWrapper: {
+    flex: 1,
+  },
+  ageLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
   },
   footer: {
     flexDirection: 'row',

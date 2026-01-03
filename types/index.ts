@@ -20,6 +20,8 @@ export interface User {
 
 export interface RoommatePreferences {
   genderPreference: 'male' | 'female' | 'any';
+  ageMin: number;
+  ageMax: number;
   budgetMin: number;
   budgetMax: number;
   location: {

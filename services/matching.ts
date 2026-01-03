@@ -140,6 +140,8 @@ export const getPotentialMatches = async (currentUser: User): Promise<(User & { 
       photos: profile.photos || [],
       preferences: {
         genderPreference: prefs.gender_preference || 'any',
+        ageMin: prefs.age_min || 18,
+        ageMax: prefs.age_max || 65,
         budgetMin: prefs.budget_min || 500,
         budgetMax: prefs.budget_max || 2000,
         location: {
@@ -156,17 +158,35 @@ export const getPotentialMatches = async (currentUser: User): Promise<(User & { 
       isVerified: profile.is_verified,
       isEmailVerified: profile.is_email_verified,
       isPhoneVerified: profile.is_phone_verified,
+      showReadReceipts: profile.show_read_receipts ?? true,
       createdAt: new Date(profile.created_at || Date.now()),
       lastActive: new Date(profile.last_active || Date.now()),
     };
   };
 
   const potentialMatches = (allProfiles || [])
-    .filter(profile =>
-      !matchedUserIds.has(profile.id) &&
-      !swipedUserIds.has(profile.id) &&
-      !blockedIds.has(profile.id)
-    )
+    .filter(profile => {
+      if (matchedUserIds.has(profile.id) || swipedUserIds.has(profile.id) || blockedIds.has(profile.id)) {
+        return false;
+      }
+
+      const profilePrefs = profile.roommate_preferences?.[0];
+      if (!profilePrefs) return true;
+
+      const profileGenderPref = profilePrefs.gender_preference || 'any';
+      const profileAgeMin = profilePrefs.age_min || 18;
+      const profileAgeMax = profilePrefs.age_max || 65;
+
+      const genderMatch =
+        (currentUser.preferences.genderPreference === 'any' || currentUser.preferences.genderPreference === profile.gender) &&
+        (profileGenderPref === 'any' || profileGenderPref === currentUser.gender);
+
+      const ageMatch =
+        (profile.age >= currentUser.preferences.ageMin && profile.age <= currentUser.preferences.ageMax) &&
+        (currentUser.age >= profileAgeMin && currentUser.age <= profileAgeMax);
+
+      return genderMatch && ageMatch;
+    })
     .map(profile => {
       const user = convertProfile(profile);
       return {
@@ -230,6 +250,8 @@ export const handleSwipe = async (
             photos: profile.photos || [],
             preferences: {
               genderPreference: prefs.gender_preference || 'any',
+              ageMin: prefs.age_min || 18,
+              ageMax: prefs.age_max || 65,
               budgetMin: prefs.budget_min || 500,
               budgetMax: prefs.budget_max || 2000,
               location: {
@@ -246,6 +268,7 @@ export const handleSwipe = async (
             isVerified: profile.is_verified,
             isEmailVerified: profile.is_email_verified,
             isPhoneVerified: profile.is_phone_verified,
+            showReadReceipts: profile.show_read_receipts ?? true,
             createdAt: new Date(profile.created_at || Date.now()),
             lastActive: new Date(profile.last_active || Date.now()),
           };
