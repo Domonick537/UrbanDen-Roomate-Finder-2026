@@ -13,6 +13,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Save } from 'lucide-react-native';
 import { supabase } from '../../services/supabase';
 import { Picker } from '@react-native-picker/picker';
+import {
+  getCountries,
+  getStatesForCountry,
+  getCitiesForState,
+  getNeighborhoodsForCity,
+} from '../../services/locationData';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -27,8 +33,19 @@ export default function EditProfileScreen() {
 
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+
+  const [country, setCountry] = useState('');
+  const [stateCode, setStateCode] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [customState, setCustomState] = useState('');
+  const [customCity, setCustomCity] = useState('');
+
+  const countries = getCountries();
+  const [states, setStates] = useState<Array<{ code: string; name: string }>>([]);
+  const [cities, setCities] = useState<Array<{ id: string; name: string }>>([]);
+  const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
+
   const [genderPreference, setGenderPreference] = useState('any');
   const [petPreference, setPetPreference] = useState('flexible');
   const [smokingPreference, setSmokingPreference] = useState('non-smoker');
@@ -73,8 +90,10 @@ export default function EditProfileScreen() {
       if (preferences) {
         setBudgetMin(preferences.budget_min?.toString() || '');
         setBudgetMax(preferences.budget_max?.toString() || '');
-        setCity(preferences.city || '');
-        setState(preferences.state || '');
+        setCountry(preferences.country || '');
+        setStateCode(preferences.state_code || '');
+        setCityId(preferences.city_id || '');
+        setNeighborhood(preferences.neighborhood || '');
         setGenderPreference(preferences.gender_preference || 'any');
         setPetPreference(preferences.pet_preference || 'flexible');
         setSmokingPreference(preferences.smoking_preference || 'non-smoker');
@@ -92,15 +111,60 @@ export default function EditProfileScreen() {
     }
   };
 
+  useEffect(() => {
+    if (country) {
+      const countryStates = getStatesForCountry(country);
+      setStates(countryStates);
+    }
+  }, [country]);
+
+  useEffect(() => {
+    if (stateCode) {
+      const stateCities = getCitiesForState(stateCode);
+      setCities(stateCities);
+    }
+  }, [stateCode]);
+
+  useEffect(() => {
+    if (stateCode && cityId) {
+      const cityNeighborhoods = getNeighborhoodsForCity(stateCode, cityId);
+      setNeighborhoods(cityNeighborhoods);
+    }
+  }, [stateCode, cityId]);
+
   const handleSave = async () => {
     if (!firstName || !age || !occupation || !bio) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    if (!budgetMin || !budgetMax || !city || !state) {
+    if (!budgetMin || !budgetMax || !country) {
       Alert.alert('Error', 'Please complete your preferences');
       return;
+    }
+
+    if (country === 'OTHER') {
+      if (!customState || !customCity) {
+        Alert.alert('Error', 'Please enter your state and city');
+        return;
+      }
+    } else {
+      if (!stateCode) {
+        Alert.alert('Error', 'Please select your state/province');
+        return;
+      }
+      if (stateCode === 'OTHER') {
+        if (!customState || !customCity) {
+          Alert.alert('Error', 'Please enter your state and city');
+          return;
+        }
+      } else if (!cityId) {
+        Alert.alert('Error', 'Please select your city');
+        return;
+      } else if (cityId === 'other' && !customCity) {
+        Alert.alert('Error', 'Please enter your city');
+        return;
+      }
     }
 
     setSaving(true);
@@ -121,13 +185,21 @@ export default function EditProfileScreen() {
 
       if (profileError) throw profileError;
 
+      const selectedCity = cities.find(c => c.id === cityId);
+      const finalState = (country === 'OTHER' || stateCode === 'OTHER') ? customState : states.find(s => s.code === stateCode)?.name || '';
+      const finalCity = (country === 'OTHER' || cityId === 'other') ? customCity : selectedCity?.name || '';
+
       const { error: preferencesError } = await supabase
         .from('roommate_preferences')
         .update({
           budget_min: parseInt(budgetMin),
           budget_max: parseInt(budgetMax),
-          city: city,
-          state: state,
+          country,
+          state: finalState,
+          state_code: stateCode,
+          city: finalCity,
+          city_id: cityId,
+          neighborhood,
           gender_preference: genderPreference,
           pet_preference: petPreference,
           smoking_preference: smokingPreference,
@@ -272,23 +344,146 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>City *</Text>
-            <TextInput
-              style={styles.input}
-              value={city}
-              onChangeText={setCity}
-              placeholder="Enter your city"
-            />
+            <Text style={styles.label}>Country *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={country}
+                onValueChange={(value) => {
+                  setCountry(value);
+                  setStateCode('');
+                  setCityId('');
+                  setNeighborhood('');
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select a country" value="" />
+                {countries.map((c) => (
+                  <Picker.Item key={c.code} label={c.name} value={c.code} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
+          {country === 'OTHER' && (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>State/Province *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your state/province"
+                  value={customState}
+                  onChangeText={setCustomState}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>City *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your city"
+                  value={customCity}
+                  onChangeText={setCustomCity}
+                />
+              </View>
+            </>
+          )}
+
+          {country !== 'OTHER' && country !== '' && (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>State/Province *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={stateCode}
+                    onValueChange={(value) => {
+                      setStateCode(value);
+                      setCityId('');
+                      setNeighborhood('');
+                    }}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select a state/province" value="" />
+                    {states.map((s) => (
+                      <Picker.Item key={s.code} label={s.name} value={s.code} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              {stateCode === 'OTHER' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Specify State/Province *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your state/province"
+                    value={customState}
+                    onChangeText={setCustomState}
+                  />
+                </View>
+              )}
+
+              {stateCode !== 'OTHER' && stateCode !== '' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>City *</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={cityId}
+                      onValueChange={(value) => {
+                        setCityId(value);
+                        setNeighborhood('');
+                      }}
+                      style={styles.picker}
+                      enabled={cities.length > 0}
+                    >
+                      <Picker.Item label={cities.length > 0 ? "Select a city" : "Select state first"} value="" />
+                      {cities.map((c) => (
+                        <Picker.Item key={c.id} label={c.name} value={c.id} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              )}
+
+              {cityId === 'other' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Specify City *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your city"
+                    value={customCity}
+                    onChangeText={setCustomCity}
+                  />
+                </View>
+              )}
+
+              {stateCode === 'OTHER' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>City *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your city"
+                    value={customCity}
+                    onChangeText={setCustomCity}
+                  />
+                </View>
+              )}
+            </>
+          )}
+
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>State/Province *</Text>
-            <TextInput
-              style={styles.input}
-              value={state}
-              onChangeText={setState}
-              placeholder="Enter your state or province"
-            />
+            <Text style={styles.label}>Neighborhood (Optional)</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={neighborhood}
+                onValueChange={(value) => setNeighborhood(value)}
+                style={styles.picker}
+                enabled={neighborhoods.length > 0}
+              >
+                <Picker.Item label={neighborhoods.length > 0 ? "Select a neighborhood" : "Select city first"} value="" />
+                {neighborhoods.map((n) => (
+                  <Picker.Item key={n} label={n} value={n} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
