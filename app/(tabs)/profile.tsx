@@ -22,9 +22,11 @@ import { getCurrentUser } from '../../services/storage';
 import { User } from '../../types';
 import PhotoUploadModal from '../../components/PhotoUploadModal';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [userPhotos, setUserPhotos] = useState<string[]>([]);
@@ -67,16 +69,16 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text }}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
       <LinearGradient
-        colors={['#4F46E5', '#6366F1']}
+        colors={theme.colors.gradient}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -85,17 +87,17 @@ export default function ProfileScreen() {
         <Text style={styles.headerSubtitle}>Manage your roommate profile</Text>
       </LinearGradient>
 
-      <View style={styles.profileCard}>
+      <View style={[styles.profileCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <View style={styles.imageContainer}>
           {user.profilePicture ? (
             <Image source={{ uri: user.profilePicture }} style={styles.profileImage} />
           ) : (
-            <View style={[styles.profileImage, styles.placeholderImage]}>
-              <UserIcon size={48} color="#9CA3AF" />
+            <View style={[styles.profileImage, styles.placeholderImage, { backgroundColor: theme.colors.borderLight }]}>
+              <UserIcon size={48} color={theme.colors.textTertiary} />
             </View>
           )}
           <TouchableOpacity
-            style={styles.cameraButton}
+            style={[styles.cameraButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => setShowPhotoModal(true)}
           >
             <Camera size={18} color="#FFFFFF" />
@@ -103,28 +105,28 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.nameContainer}>
-          <Text style={styles.name}>
+          <Text style={[styles.name, { color: theme.colors.text }]}>
             {user.firstName}, {user.age}
           </Text>
-          {user.isVerified && <Shield size={28} color="#10B981" />}
+          {user.isVerified && <Shield size={28} color={theme.colors.success} />}
         </View>
 
         <View style={styles.infoRow}>
-          <Briefcase size={16} color="#6B7280" />
-          <Text style={styles.infoText}>{user.occupation}</Text>
+          <Briefcase size={16} color={theme.colors.textSecondary} />
+          <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>{user.occupation}</Text>
         </View>
 
         <View style={styles.infoRow}>
-          <MapPin size={16} color="#6B7280" />
-          <Text style={styles.infoText}>
+          <MapPin size={16} color={theme.colors.textSecondary} />
+          <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
             {user.preferences.location.city}, {user.preferences.location.state}
           </Text>
         </View>
 
-        <Text style={styles.bio}>{user.bio}</Text>
+        <Text style={[styles.bio, { color: theme.colors.text }]}>{user.bio}</Text>
 
         <TouchableOpacity
-          style={styles.editButton}
+          style={[styles.editButton, { backgroundColor: theme.colors.success }]}
           onPress={() => router.push('/profile/edit')}
         >
           <Edit size={18} color="#FFFFFF" />
@@ -133,27 +135,27 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Verification Status</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Verification Status</Text>
         <TouchableOpacity
-          style={styles.settingItem}
+          style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
           onPress={() => router.push('/profile/verification')}
         >
-          <View style={styles.settingIcon}>
-            <Shield size={20} color={user.isVerified ? '#10B981' : '#6B7280'} />
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.surface }]}>
+            <Shield size={20} color={user.isVerified ? theme.colors.success : theme.colors.textSecondary} />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Identity Verification</Text>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Identity Verification</Text>
             <Text
               style={[
                 styles.settingSubtitle,
-                user.isVerified ? styles.verifiedText : styles.notVerifiedText,
+                user.isVerified ? [styles.verifiedText, { color: theme.colors.success }] : [styles.notVerifiedText, { color: theme.colors.error }],
               ]}
             >
               {user.isVerified ? 'Verified' : 'Not Verified'}
             </Text>
           </View>
           {!user.isVerified && (
-            <TouchableOpacity style={styles.verifyButton}>
+            <TouchableOpacity style={[styles.verifyButton, { backgroundColor: theme.colors.primary }]}>
               <Text style={styles.verifyButtonText}>Verify</Text>
             </TouchableOpacity>
           )}
@@ -161,28 +163,28 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Roommate Preferences</Text>
-        <View style={styles.preferenceCard}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Roommate Preferences</Text>
+        <View style={[styles.preferenceCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
           <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Gender Preference</Text>
-            <Text style={styles.preferenceValue}>
+            <Text style={[styles.preferenceLabel, { color: theme.colors.textSecondary }]}>Gender Preference</Text>
+            <Text style={[styles.preferenceValue, { color: theme.colors.text }]}>
               {user.preferences.genderPreference === 'any'
                 ? 'Any'
                 : user.preferences.genderPreference.charAt(0).toUpperCase() +
                   user.preferences.genderPreference.slice(1)}
             </Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Budget Range</Text>
-            <Text style={styles.preferenceValue}>
+            <Text style={[styles.preferenceLabel, { color: theme.colors.textSecondary }]}>Budget Range</Text>
+            <Text style={[styles.preferenceValue, { color: theme.colors.text }]}>
               ${user.preferences.budgetMin} - ${user.preferences.budgetMax}
             </Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Move-in Timeline</Text>
-            <Text style={styles.preferenceValue}>
+            <Text style={[styles.preferenceLabel, { color: theme.colors.textSecondary }]}>Move-in Timeline</Text>
+            <Text style={[styles.preferenceValue, { color: theme.colors.text }]}>
               {user.preferences.moveInDate === 'urgent'
                 ? 'ASAP'
                 : user.preferences.moveInDate === '2-3months'
@@ -190,10 +192,10 @@ export default function ProfileScreen() {
                 : 'Flexible'}
             </Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Pet Preference</Text>
-            <Text style={styles.preferenceValue}>
+            <Text style={[styles.preferenceLabel, { color: theme.colors.textSecondary }]}>Pet Preference</Text>
+            <Text style={[styles.preferenceValue, { color: theme.colors.text }]}>
               {user.preferences.petPreference === 'love-pets'
                 ? 'Love pets'
                 : user.preferences.petPreference === 'no-pets'
@@ -203,10 +205,10 @@ export default function ProfileScreen() {
                 : 'Flexible'}
             </Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Lifestyle</Text>
-            <Text style={styles.preferenceValue}>
+            <Text style={[styles.preferenceLabel, { color: theme.colors.textSecondary }]}>Lifestyle</Text>
+            <Text style={[styles.preferenceValue, { color: theme.colors.text }]}>
               {user.preferences.smokingPreference === 'non-smoker'
                 ? 'Non-smoker'
                 : 'Smoker'}{' '}
@@ -222,15 +224,15 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
         <TouchableOpacity
-          style={styles.actionCard}
+          style={[styles.actionCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
           onPress={() => router.push('/profile/agreements')}
         >
-          <View style={styles.actionIcon}>
-            <FileText size={24} color="#4F46E5" />
+          <View style={[styles.actionIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <FileText size={24} color={theme.colors.primary} />
           </View>
-          <Text style={styles.actionText}>Roommate Agreements</Text>
+          <Text style={[styles.actionText, { color: theme.colors.text }]}>Roommate Agreements</Text>
         </TouchableOpacity>
       </View>
 
