@@ -161,11 +161,21 @@ export default function OnboardingScreen() {
 
   const handleComplete = async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      console.log('Starting profile completion...');
+
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('Auth error:', userError);
+        Alert.alert('Error', `Authentication error: ${userError.message}`);
+        return;
+      }
+
       if (!authUser) {
         Alert.alert('Error', 'User not found. Please try signing in again.');
         return;
       }
+
+      console.log('User ID:', authUser.id);
 
       const selectedCity = cities.find(c => c.id === cityId);
       const finalState = (country === 'OTHER' || state === 'OTHER') ? customState : states.find(s => s.code === state)?.name || '';
@@ -183,53 +193,68 @@ export default function OnboardingScreen() {
         finalBudgetMax = max === 'plus' ? 999999 : parseInt(max);
       }
 
-      const { error: profileError } = await supabase
+      console.log('Updating profile...');
+      const profileData = {
+        first_name: firstName,
+        age: parseInt(age),
+        gender,
+        occupation,
+        bio,
+        profile_picture: profilePicture || null,
+      };
+      console.log('Profile data:', profileData);
+
+      const { data: profileResult, error: profileError } = await supabase
         .from('profiles')
-        .update({
-          first_name: firstName,
-          age: parseInt(age),
-          gender,
-          occupation,
-          bio,
-          profile_picture: profilePicture,
-        })
-        .eq('id', authUser.id);
+        .update(profileData)
+        .eq('id', authUser.id)
+        .select();
 
       if (profileError) {
         console.error('Profile update error:', profileError);
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
+        Alert.alert('Profile Error', `Failed to update profile: ${profileError.message}`);
         return;
       }
 
-      const { error: preferencesError } = await supabase
+      console.log('Profile updated successfully:', profileResult);
+
+      console.log('Saving preferences...');
+      const preferencesData = {
+        user_id: authUser.id,
+        gender_preference: genderPreference,
+        budget_min: finalBudgetMin,
+        budget_max: finalBudgetMax,
+        state: finalState,
+        city: finalCity,
+        neighborhood: neighborhood || null,
+        move_in_date: moveInDate,
+        pet_preference: petPreference,
+        smoking_preference: smokingPreference,
+        drinking_preference: drinkingPreference,
+        cleanliness,
+        social_level: socialLevel,
+      };
+      console.log('Preferences data:', preferencesData);
+
+      const { data: prefsResult, error: preferencesError } = await supabase
         .from('roommate_preferences')
-        .upsert({
-          user_id: authUser.id,
-          gender_preference: genderPreference,
-          budget_min: finalBudgetMin,
-          budget_max: finalBudgetMax,
-          state: finalState,
-          city: finalCity,
-          neighborhood,
-          move_in_date: moveInDate,
-          pet_preference: petPreference,
-          smoking_preference: smokingPreference,
-          drinking_preference: drinkingPreference,
-          cleanliness,
-          social_level: socialLevel,
-        });
+        .upsert(preferencesData)
+        .select();
 
       if (preferencesError) {
         console.error('Preferences update error:', preferencesError);
-        Alert.alert('Error', 'Failed to save preferences. Please try again.');
+        Alert.alert('Preferences Error', `Failed to save preferences: ${preferencesError.message}`);
         return;
       }
 
+      console.log('Preferences saved successfully:', prefsResult);
+      console.log('Setting onboarding complete...');
       await setOnboardingComplete();
+      console.log('Redirecting to tabs...');
       router.replace('/(tabs)');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error completing onboarding:', error);
-      Alert.alert('Error', 'Failed to complete setup. Please try again.');
+      Alert.alert('Error', `Failed to complete setup: ${error?.message || 'Unknown error'}`);
     }
   };
 
