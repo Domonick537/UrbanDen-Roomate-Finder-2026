@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
@@ -15,8 +15,10 @@ import {
   addUser,
   getRoommateAgreements,
   addRoommateAgreement,
+  setCurrentUser,
 } from '../services/storage';
 import { mockUsers, agreementTemplates } from '../services/mockData';
+import { supabase } from '../services/supabase';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -45,6 +47,33 @@ export default function RootLayout() {
       }, 100);
     }
   }, [appReady, showSplash]);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        (async () => {
+          if (event === 'SIGNED_OUT') {
+            await setCurrentUser(null);
+            router.replace('/(auth)/welcome');
+          } else if (event === 'SIGNED_IN' && session?.user) {
+            const user = await getCurrentUser();
+            if (!user) {
+              const onboardingDone = await isOnboardingComplete();
+              if (!onboardingDone) {
+                router.replace('/(auth)/onboarding');
+              } else {
+                router.replace('/(tabs)');
+              }
+            }
+          }
+        })();
+      }
+    );
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
 
 
   const initializeApp = async () => {
