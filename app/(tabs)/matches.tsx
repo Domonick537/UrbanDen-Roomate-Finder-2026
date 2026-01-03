@@ -9,22 +9,34 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, MessageCircle, Shield, User as UserIcon } from 'lucide-react-native';
 import { getCurrentUser, getMessages } from '../../services/storage';
 import { getUserMatches } from '../../services/matching';
 import { supabase } from '../../services/supabase';
-import { User, Match } from '../../types';
+import { User, Match, Message } from '../../types';
+
+interface MatchWithDetails extends Match {
+  user: User;
+  lastMessage?: string;
+  unreadCount: number;
+}
 
 export default function MatchesScreen() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [matches, setMatches] = useState<(Match & { user: User; lastMessage?: string })[]>([]);
+  const [matches, setMatches] = useState<MatchWithDetails[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadMatches();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadMatches();
+    }, [])
+  );
 
   const loadMatches = async () => {
     const user = await getCurrentUser();
@@ -75,6 +87,7 @@ export default function MatchesScreen() {
           isVerified: matchedProfile.is_verified,
           isEmailVerified: matchedProfile.is_email_verified,
           isPhoneVerified: matchedProfile.is_phone_verified,
+          showReadReceipts: matchedProfile.show_read_receipts ?? true,
           createdAt: new Date(matchedProfile.created_at || Date.now()),
           lastActive: new Date(matchedProfile.last_active || Date.now()),
         };
@@ -82,15 +95,23 @@ export default function MatchesScreen() {
         const messages = await getMessages(match.id);
         const lastMessage = messages[messages.length - 1];
 
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('match_id', match.id)
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
+
         return {
           ...match,
           user: matchedUser,
           lastMessage: lastMessage?.content,
+          unreadCount: count || 0,
         };
       })
     );
 
-    const validMatches = userMatches.filter(m => m !== null) as (Match & { user: User; lastMessage?: string })[];
+    const validMatches = userMatches.filter(m => m !== null) as MatchWithDetails[];
 
     validMatches.sort((a, b) => {
       const aTime = a.createdAt;
@@ -106,7 +127,7 @@ export default function MatchesScreen() {
     match.user.occupation.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderMatch = ({ item }: { item: Match & { user: User; lastMessage?: string } }) => (
+  const renderMatch = ({ item }: { item: MatchWithDetails }) => (
     <TouchableOpacity
       style={styles.matchCard}
       onPress={() => router.push(`/chat/${item.id}`)}
@@ -124,6 +145,11 @@ export default function MatchesScreen() {
             <Shield size={16} color="#FFFFFF" />
           </View>
         )}
+        {item.unreadCount > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>{item.unreadCount}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.matchContent}>
@@ -136,7 +162,7 @@ export default function MatchesScreen() {
         <Text style={styles.matchLocation}>
           {item.user.preferences.location.city}, {item.user.preferences.location.state}
         </Text>
-        <Text style={styles.lastMessage} numberOfLines={1}>
+        <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
           {item.lastMessage || 'Start a conversation!'}
         </Text>
       </View>
@@ -290,6 +316,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  unreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: 12,
+    backgroundColor: '#EF4444',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  unreadText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
   matchContent: {
     flex: 1,
   },
@@ -323,6 +368,10 @@ const styles = StyleSheet.create({
   lastMessage: {
     fontSize: 14,
     color: '#9CA3AF',
+  },
+  unreadMessage: {
+    fontWeight: '600',
+    color: '#111827',
   },
   emptyState: {
     flex: 1,

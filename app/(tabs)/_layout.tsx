@@ -1,7 +1,63 @@
 import { Tabs } from 'expo-router';
 import { Home, MessageCircle, User, Settings } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { getCurrentUser } from '../../services/storage';
+import { getUnreadMessageCount } from '../../services/realtime';
+import { supabase } from '../../services/supabase';
 
 export default function TabLayout() {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const subscription = supabase
+      .channel('new-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          loadUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          loadUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUserId]);
+
+  const loadUnreadCount = async () => {
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    setCurrentUserId(user.id);
+    const count = await getUnreadMessageCount(user.id);
+    setUnreadCount(count);
+  };
+
   return (
     <Tabs
       screenOptions={{
@@ -19,6 +75,17 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+        },
+        tabBarBadgeStyle: {
+          backgroundColor: '#EF4444',
+          color: '#FFFFFF',
+          fontSize: 12,
+          fontWeight: 'bold',
+          minWidth: 20,
+          height: 20,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
       }}
     >
@@ -38,6 +105,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <MessageCircle size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen
