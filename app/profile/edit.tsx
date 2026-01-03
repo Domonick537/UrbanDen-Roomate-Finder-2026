@@ -23,6 +23,7 @@ export default function EditProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('male');
   const [occupation, setOccupation] = useState('');
+  const [customOccupation, setCustomOccupation] = useState('');
   const [bio, setBio] = useState('');
 
   const [budgetMin, setBudgetMin] = useState('');
@@ -33,6 +34,8 @@ export default function EditProfileScreen() {
   const [petPreference, setPetPreference] = useState('flexible');
   const [smokingPreference, setSmokingPreference] = useState('non-smoker');
   const [drinkingPreference, setDrinkingPreference] = useState('social-drinker');
+  const [cleanliness, setCleanliness] = useState('clean');
+  const [socialLevel, setSocialLevel] = useState('sometimes');
   const [moveInDate, setMoveInDate] = useState('flexible');
 
   useEffect(() => {
@@ -71,12 +74,14 @@ export default function EditProfileScreen() {
       if (preferences) {
         setBudgetMin(preferences.budget_min?.toString() || '');
         setBudgetMax(preferences.budget_max?.toString() || '');
-        setCity(preferences.location_city || '');
-        setState(preferences.location_state || '');
+        setCity(preferences.city || '');
+        setState(preferences.state || '');
         setGenderPreference(preferences.gender_preference || 'any');
         setPetPreference(preferences.pet_preference || 'flexible');
         setSmokingPreference(preferences.smoking_preference || 'non-smoker');
         setDrinkingPreference(preferences.drinking_preference || 'social-drinker');
+        setCleanliness(preferences.cleanliness || 'clean');
+        setSocialLevel(preferences.social_level || 'sometimes');
         setMoveInDate(preferences.move_in_date || 'flexible');
       }
 
@@ -89,7 +94,9 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!firstName || !age || !occupation || !bio) {
+    const finalOccupation = occupation === 'Other' ? customOccupation : occupation;
+
+    if (!firstName || !age || !finalOccupation || !bio) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -110,7 +117,7 @@ export default function EditProfileScreen() {
           first_name: firstName,
           age: parseInt(age),
           gender,
-          occupation,
+          occupation: finalOccupation,
           bio,
         })
         .eq('id', user.id);
@@ -122,12 +129,14 @@ export default function EditProfileScreen() {
         .update({
           budget_min: parseInt(budgetMin),
           budget_max: parseInt(budgetMax),
-          location_city: city,
-          location_state: state,
+          city: city,
+          state: state,
           gender_preference: genderPreference,
           pet_preference: petPreference,
           smoking_preference: smokingPreference,
           drinking_preference: drinkingPreference,
+          cleanliness: cleanliness,
+          social_level: socialLevel,
           move_in_date: moveInDate,
         })
         .eq('user_id', user.id);
@@ -155,7 +164,7 @@ export default function EditProfileScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#4F46E5', '#6366F1']}
+        colors={['#059669', '#10B981']}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -218,13 +227,47 @@ export default function EditProfileScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Occupation *</Text>
-            <TextInput
-              style={styles.input}
-              value={occupation}
-              onChangeText={setOccupation}
-              placeholder="What do you do?"
-            />
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={occupation}
+                onValueChange={setOccupation}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select your occupation" value="" />
+                <Picker.Item label="Software Engineer" value="Software Engineer" />
+                <Picker.Item label="Data Analyst" value="Data Analyst" />
+                <Picker.Item label="Marketing Manager" value="Marketing Manager" />
+                <Picker.Item label="Graphic Designer" value="Graphic Designer" />
+                <Picker.Item label="Teacher" value="Teacher" />
+                <Picker.Item label="Nurse" value="Nurse" />
+                <Picker.Item label="Financial Analyst" value="Financial Analyst" />
+                <Picker.Item label="Sales Representative" value="Sales Representative" />
+                <Picker.Item label="Product Manager" value="Product Manager" />
+                <Picker.Item label="Consultant" value="Consultant" />
+                <Picker.Item label="Engineer" value="Engineer" />
+                <Picker.Item label="Accountant" value="Accountant" />
+                <Picker.Item label="Lawyer" value="Lawyer" />
+                <Picker.Item label="Doctor" value="Doctor" />
+                <Picker.Item label="Student" value="Student" />
+                <Picker.Item label="Entrepreneur" value="Entrepreneur" />
+                <Picker.Item label="Healthcare Professional" value="Healthcare Professional" />
+                <Picker.Item label="Writer/Content Creator" value="Writer/Content Creator" />
+                <Picker.Item label="Other" value="Other" />
+              </Picker>
+            </View>
           </View>
+
+          {occupation === 'Other' && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Specify Occupation *</Text>
+              <TextInput
+                style={styles.input}
+                value={customOccupation}
+                onChangeText={setCustomOccupation}
+                placeholder="Enter your occupation"
+              />
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Bio *</Text>
@@ -265,22 +308,23 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Location *</Text>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, styles.flexInput]}
-                value={city}
-                onChangeText={setCity}
-                placeholder="City"
-              />
-              <TextInput
-                style={[styles.input, styles.stateInput]}
-                value={state}
-                onChangeText={setState}
-                placeholder="State"
-                maxLength={2}
-              />
-            </View>
+            <Text style={styles.label}>City *</Text>
+            <TextInput
+              style={styles.input}
+              value={city}
+              onChangeText={setCity}
+              placeholder="Enter your city"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>State/Province *</Text>
+            <TextInput
+              style={styles.input}
+              value={state}
+              onChangeText={setState}
+              placeholder="Enter your state or province"
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -337,9 +381,40 @@ export default function EditProfileScreen() {
                 onValueChange={setDrinkingPreference}
                 style={styles.picker}
               >
-                <Picker.Item label="Non-drinker" value="non-drinker" />
                 <Picker.Item label="Social Drinker" value="social-drinker" />
-                <Picker.Item label="Regular Drinker" value="regular-drinker" />
+                <Picker.Item label="Non-drinker" value="non-drinker" />
+                <Picker.Item label="Flexible" value="flexible" />
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Cleanliness</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={cleanliness}
+                onValueChange={setCleanliness}
+                style={styles.picker}
+              >
+                <Picker.Item label="Very Clean" value="very-clean" />
+                <Picker.Item label="Clean" value="clean" />
+                <Picker.Item label="Flexible" value="flexible" />
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Social Level</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={socialLevel}
+                onValueChange={setSocialLevel}
+                style={styles.picker}
+              >
+                <Picker.Item label="Very Social" value="very-social" />
+                <Picker.Item label="Sometimes Social" value="sometimes" />
+                <Picker.Item label="Quiet/Private" value="quiet" />
+                <Picker.Item label="Flexible" value="flexible" />
               </Picker>
             </View>
           </View>
@@ -352,9 +427,10 @@ export default function EditProfileScreen() {
                 onValueChange={setMoveInDate}
                 style={styles.picker}
               >
-                <Picker.Item label="ASAP" value="urgent" />
-                <Picker.Item label="2-3 months" value="2-3months" />
+                <Picker.Item label="Urgently seeking" value="urgent" />
                 <Picker.Item label="Flexible" value="flexible" />
+                <Picker.Item label="Next 2-3 months" value="2-3months" />
+                <Picker.Item label="Other" value="other" />
               </Picker>
             </View>
           </View>
@@ -458,12 +534,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   halfInput: {
-    flex: 1,
-  },
-  flexInput: {
-    flex: 2,
-  },
-  stateInput: {
     flex: 1,
   },
   separator: {

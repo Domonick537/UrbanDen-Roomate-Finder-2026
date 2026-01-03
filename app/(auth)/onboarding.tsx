@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#059669',
   },
   content: {
     flex: 1,
@@ -894,8 +894,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionButtonActive: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#4F46E5',
+    borderColor: '#059669',
+    backgroundColor: '#059669',
   },
   optionButtonText: {
     fontSize: 14,
@@ -948,7 +948,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   nextButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#059669',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
