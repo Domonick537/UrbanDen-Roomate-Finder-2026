@@ -10,20 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  MapPin,
-  Briefcase,
-  Shield,
-  Home,
-  Calendar,
-  Heart,
-  Coffee,
-  Wind,
-  Sparkles,
-  Users,
-  User as UserIcon,
-} from 'lucide-react-native';
+import { ArrowLeft, MapPin, Briefcase, Shield, Hop as Home, Calendar, Heart, Coffee, Wind, Sparkles, Users, User as UserIcon } from 'lucide-react-native';
 import { supabase } from '../../../services/supabase';
 import { User } from '../../../types';
 
