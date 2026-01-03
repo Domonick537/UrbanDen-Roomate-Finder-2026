@@ -11,7 +11,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Search, MessageCircle, Shield, User as UserIcon } from 'lucide-react-native';
-import { getCurrentUser, getMatches, getAllUsers, getMessages } from '../../services/storage';
+import { getCurrentUser, getMessages } from '../../services/storage';
+import { getUserMatches } from '../../services/matching';
+import { supabase } from '../../services/supabase';
 import { User, Match } from '../../types';
 
 export default function MatchesScreen() {
@@ -29,36 +31,74 @@ export default function MatchesScreen() {
     if (!user) return;
 
     setCurrentUser(user);
-    const allMatches = await getMatches();
-    const allUsers = await getAllUsers();
+    const allMatches = await getUserMatches(user.id);
 
-    const userMatches = allMatches
-      .filter(m => m.userId1 === user.id || m.userId2 === user.id)
-      .map(match => {
+    const userMatches = await Promise.all(
+      allMatches.map(async match => {
         const matchedUserId = match.userId1 === user.id ? match.userId2 : match.userId1;
-        const matchedUser = allUsers.find(u => u.id === matchedUserId);
-        return { ...match, user: matchedUser! };
-      })
-      .filter(m => m.user);
 
-    const matchesWithMessages = await Promise.all(
-      userMatches.map(async match => {
+        const { data: matchedProfile } = await supabase
+          .from('profiles')
+          .select('*, roommate_preferences(*)')
+          .eq('id', matchedUserId)
+          .single();
+
+        if (!matchedProfile) return null;
+
+        const prefs = matchedProfile.roommate_preferences?.[0] || {};
+        const matchedUser: User = {
+          id: matchedProfile.id,
+          firstName: matchedProfile.first_name,
+          age: matchedProfile.age,
+          gender: matchedProfile.gender,
+          occupation: matchedProfile.occupation,
+          bio: matchedProfile.bio,
+          email: matchedProfile.email || '',
+          phone: matchedProfile.phone,
+          photos: matchedProfile.photos || [],
+          profilePicture: matchedProfile.photos?.[0],
+          preferences: {
+            genderPreference: prefs.gender_preference || 'any',
+            budgetMin: prefs.budget_min || 500,
+            budgetMax: prefs.budget_max || 2000,
+            location: {
+              city: prefs.location_city || '',
+              state: prefs.location_state || '',
+            },
+            moveInDate: prefs.move_in_date || 'flexible',
+            petPreference: prefs.pet_preference || 'flexible',
+            smokingPreference: prefs.smoking_preference || 'flexible',
+            drinkingPreference: prefs.drinking_preference || 'flexible',
+            cleanliness: prefs.cleanliness || 'flexible',
+            socialLevel: prefs.social_level || 'flexible',
+          },
+          isVerified: matchedProfile.is_verified,
+          isEmailVerified: matchedProfile.is_email_verified,
+          isPhoneVerified: matchedProfile.is_phone_verified,
+          createdAt: new Date(matchedProfile.created_at || Date.now()),
+          lastActive: new Date(matchedProfile.last_active || Date.now()),
+        };
+
         const messages = await getMessages(match.id);
         const lastMessage = messages[messages.length - 1];
+
         return {
           ...match,
+          user: matchedUser,
           lastMessage: lastMessage?.content,
         };
       })
     );
 
-    matchesWithMessages.sort((a, b) => {
-      const aTime = a.lastMessageAt || a.createdAt;
-      const bTime = b.lastMessageAt || b.createdAt;
+    const validMatches = userMatches.filter(m => m !== null) as (Match & { user: User; lastMessage?: string })[];
+
+    validMatches.sort((a, b) => {
+      const aTime = a.createdAt;
+      const bTime = b.createdAt;
       return bTime.getTime() - aTime.getTime();
     });
 
-    setMatches(matchesWithMessages);
+    setMatches(validMatches);
   };
 
   const filteredMatches = matches.filter(match =>
