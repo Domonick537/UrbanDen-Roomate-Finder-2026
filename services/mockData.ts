@@ -571,10 +571,10 @@ Date: [Date]
 - Guest network: [For visitors to avoid slowing main network]
 - Tech issues: [Both responsible for troubleshooting]
 
-### Video Call Quality
-- Bandwidth for calls: [Priority during meetings]
+### Internet Quality During Work
+- Bandwidth for work: [Priority during business hours]
 - Large downloads: [Schedule outside work hours]
-- Gaming/streaming: [Limit during work hours if affecting calls]
+- Gaming/streaming: [Limit during work hours if affecting internet]
 
 ## 5. Shared Spaces During Work
 
@@ -586,7 +586,7 @@ Date: [Date]
 
 ### Living Room/Common Areas
 - Working from shared spaces: [Coordination required]
-- Video call backgrounds: [Keep areas presentable]
+- Shared area appearance: [Keep areas presentable during work hours]
 - Personal items: [Clear away after work]
 - TV/entertainment: [Not during work hours unless agreed]
 
@@ -665,7 +665,7 @@ Date: [Date]
 - Trash: [Don't let accumulate]
 
 ### Professional Appearance
-- Video call backgrounds: [Keep visible areas neat]
+- Work areas: [Keep visible areas neat and professional]
 - Personal hygiene: [Professional even at home]
 - Casual dress: [OK, but presentable]
 

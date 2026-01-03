@@ -209,8 +209,6 @@ As a thank you for participating in our beta:
 Coming soon:
 - Push notifications for matches and messages
 - Photo sharing in chat
-- Video verification
-- Background checks integration
 - Roommate agreement templates
 - Move-in checklists
 

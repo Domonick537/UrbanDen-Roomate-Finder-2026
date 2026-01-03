@@ -90,7 +90,7 @@ export const ICE_BREAKERS = [
   "Hi there! What's your ideal living situation?",
   "Hey! Love your profile - are you flexible with move-in dates?",
   "Hi! What's the most important thing you look for in a roommate?",
-  "Hey! Are you open to a video call to chat more?",
+  "Hey! When would be a good time to meet for coffee?",
   "Hi! What area are you looking to live in?",
   "Hey! Tell me about your lifestyle - are you more social or quiet?"
 ];

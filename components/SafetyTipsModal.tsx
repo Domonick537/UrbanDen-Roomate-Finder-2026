@@ -66,7 +66,7 @@ export default function SafetyTipsModal({ visible, onClose }: SafetyTipsModalPro
             <View style={styles.tipContent}>
               <Text style={styles.tipTitle}>Verify Identity</Text>
               <Text style={styles.tipDescription}>
-                Before meeting, verify the person's identity through video calls and social media. Ask for references from previous roommates.
+                Look for verified profiles with the verification badge. Ask for references from previous roommates and verify their identity through social media if possible.
               </Text>
             </View>
           </View>

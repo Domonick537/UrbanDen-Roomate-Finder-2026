@@ -169,8 +169,7 @@ Located in `.env`:
 5. **Additional Features**
    - Push notifications
    - Location-based search with maps
-   - Video call integration
-   - Background checks and verification
+   - Roommate agreement templates
 
 ## Development Notes
 
