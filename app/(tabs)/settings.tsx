@@ -25,12 +25,16 @@ import {
   Moon,
   Sun,
   Monitor,
+  MessageSquare,
+  ShieldAlert,
 } from 'lucide-react-native';
 import { clearAllData, setCurrentUser, getCurrentUser, updateUser } from '../../services/storage';
 import { exportUserData, deleteUserAccount } from '../../services/dataExport';
 import { supabase } from '../../services/supabase';
 import { User } from '../../types';
 import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
+import { FeedbackModal } from '../../components/FeedbackModal';
+import { adminService } from '../../services/admin';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -40,10 +44,18 @@ export default function SettingsScreen() {
   const [locationServices, setLocationServices] = useState(true);
   const [readReceipts, setReadReceipts] = useState(true);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     loadUserSettings();
+    checkAdminStatus();
   }, []);
+
+  const checkAdminStatus = async () => {
+    const adminStatus = await adminService.isAdmin();
+    setIsAdmin(adminStatus);
+  };
 
   const loadUserSettings = async () => {
     const user = await getCurrentUser();
@@ -206,6 +218,25 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
+      {isAdmin && (
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>ADMIN</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
+            onPress={() => router.push('/admin')}
+          >
+            <View style={[styles.settingIcon, { backgroundColor: '#FEE2E2' }]}>
+              <ShieldAlert size={20} color="#EF4444" />
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Admin Dashboard</Text>
+              <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Manage users, reports, and content</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>PRIVACY & SECURITY</Text>
 
@@ -302,6 +333,19 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>SUPPORT</Text>
+
+        <TouchableOpacity
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
+          onPress={() => setShowFeedbackModal(true)}
+        >
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <MessageSquare size={20} color={theme.colors.primary} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Send Feedback</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Report bugs or suggest features</Text>
+          </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
@@ -418,6 +462,8 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <FeedbackModal visible={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
     </ScrollView>
   );
 }

@@ -22,6 +22,8 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { getCardWidth, getCardHeight, isDesktop, getMaxWidth } from '../../utils/responsive';
 import { useTheme } from '../../contexts/ThemeContext';
+import { OnboardingTutorial } from '../../components/OnboardingTutorial';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -36,6 +38,7 @@ export default function DiscoverScreen() {
   const [matchedUser, setMatchedUser] = useState<(User & { compatibility: number}) | null>(null);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const position = useRef(new Animated.ValueXY()).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
@@ -72,7 +75,30 @@ export default function DiscoverScreen() {
 
   useEffect(() => {
     loadMatches();
+    checkTutorialStatus();
   }, []);
+
+  const checkTutorialStatus = async () => {
+    try {
+      const hasSeenTutorial = await AsyncStorage.getItem('hasSeenTutorial');
+      if (!hasSeenTutorial) {
+        setTimeout(() => {
+          setShowTutorial(true);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error checking tutorial status:', error);
+    }
+  };
+
+  const handleTutorialComplete = async () => {
+    try {
+      await AsyncStorage.setItem('hasSeenTutorial', 'true');
+      setShowTutorial(false);
+    } catch (error) {
+      console.error('Error saving tutorial status:', error);
+    }
+  };
 
   const loadMatches = async () => {
     setIsLoading(true);
@@ -392,6 +418,11 @@ export default function DiscoverScreen() {
           onMessage={handleMatchMessage}
         />
       )}
+
+      <OnboardingTutorial
+        visible={showTutorial}
+        onComplete={handleTutorialComplete}
+      />
 
       <View style={contentWrapper}>
         <LinearGradient
