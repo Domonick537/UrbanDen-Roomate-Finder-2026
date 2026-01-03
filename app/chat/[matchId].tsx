@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Send, Smile, User as UserIcon } from 'lucide-react-native';
-import { getCurrentUser, getMessages, addMessage, getMatches, getAllUsers } from '../../services/storage';
+import { getCurrentUser, getMessages, addMessage } from '../../services/storage';
+import { getUserMatches } from '../../services/matching';
 import { subscribeToMessages, markMessagesAsRead } from '../../services/realtime';
+import { supabase } from '../../services/supabase';
 import { User, Message, ICE_BREAKERS } from '../../types';
 
 export default function ChatScreen() {
@@ -59,14 +61,54 @@ export default function ChatScreen() {
 
     setCurrentUser(user);
 
-    const matches = await getMatches();
+    const matches = await getUserMatches(user.id);
     const match = matches.find(m => m.id === matchId);
     if (!match) return;
 
     const otherUserId = match.userId1 === user.id ? match.userId2 : match.userId1;
-    const allUsers = await getAllUsers();
-    const other = allUsers.find(u => u.id === otherUserId);
-    setOtherUser(other || null);
+
+    const { data: otherProfile } = await supabase
+      .from('profiles')
+      .select('*, roommate_preferences(*)')
+      .eq('id', otherUserId)
+      .single();
+
+    if (otherProfile) {
+      const prefs = otherProfile.roommate_preferences?.[0] || {};
+      const other: User = {
+        id: otherProfile.id,
+        firstName: otherProfile.first_name,
+        age: otherProfile.age,
+        gender: otherProfile.gender,
+        occupation: otherProfile.occupation,
+        bio: otherProfile.bio,
+        email: '',
+        phone: otherProfile.phone,
+        photos: otherProfile.photos || [],
+        profilePicture: otherProfile.photos?.[0],
+        preferences: {
+          genderPreference: prefs.gender_preference || 'any',
+          budgetMin: prefs.budget_min || 500,
+          budgetMax: prefs.budget_max || 2000,
+          location: {
+            city: prefs.location_city || '',
+            state: prefs.location_state || '',
+          },
+          moveInDate: prefs.move_in_date || 'flexible',
+          petPreference: prefs.pet_preference || 'flexible',
+          smokingPreference: prefs.smoking_preference || 'flexible',
+          drinkingPreference: prefs.drinking_preference || 'flexible',
+          cleanliness: prefs.cleanliness || 'flexible',
+          socialLevel: prefs.social_level || 'flexible',
+        },
+        isVerified: otherProfile.is_verified,
+        isEmailVerified: otherProfile.is_email_verified,
+        isPhoneVerified: otherProfile.is_phone_verified,
+        createdAt: new Date(otherProfile.created_at || Date.now()),
+        lastActive: new Date(otherProfile.last_active || Date.now()),
+      };
+      setOtherUser(other);
+    }
 
     const chatMessages = await getMessages(matchId);
     setMessages(chatMessages);
