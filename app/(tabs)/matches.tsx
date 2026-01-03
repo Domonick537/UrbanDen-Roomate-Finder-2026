@@ -128,11 +128,11 @@ export default function MatchesScreen() {
   );
 
   const renderMatch = ({ item }: { item: MatchWithDetails }) => (
-    <TouchableOpacity
-      style={styles.matchCard}
-      onPress={() => router.push(`/chat/${item.id}`)}
-    >
-      <View style={styles.matchImageContainer}>
+    <View style={styles.matchCard}>
+      <TouchableOpacity
+        style={styles.matchImageContainer}
+        onPress={() => router.push(`/profile/view/${item.user.id}`)}
+      >
         {item.user.profilePicture ? (
           <Image source={{ uri: item.user.profilePicture }} style={styles.matchImage} />
         ) : (
@@ -150,9 +150,12 @@ export default function MatchesScreen() {
             <Text style={styles.unreadText}>{item.unreadCount}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
-      <View style={styles.matchContent}>
+      <TouchableOpacity
+        style={styles.matchContent}
+        onPress={() => router.push(`/chat/${item.id}`)}
+      >
         <View style={styles.matchHeader}>
           <Text style={styles.matchName}>{item.user.firstName}</Text>
           <View style={styles.compatibilityBadge}>
@@ -165,10 +168,12 @@ export default function MatchesScreen() {
         <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
           {item.lastMessage || 'Start a conversation!'}
         </Text>
-      </View>
+      </TouchableOpacity>
 
-      <MessageCircle size={20} color="#4F46E5" />
-    </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push(`/chat/${item.id}`)}>
+        <MessageCircle size={20} color="#4F46E5" />
+      </TouchableOpacity>
+    </View>
   );
 
   if (!currentUser) {
@@ -288,6 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F3F4F6',
+    gap: 16,
   },
   matchImageContainer: {
     position: 'relative',
@@ -296,7 +302,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 16,
   },
   placeholderImage: {
     backgroundColor: '#E5E7EB',

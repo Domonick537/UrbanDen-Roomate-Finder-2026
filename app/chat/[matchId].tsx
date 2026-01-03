@@ -193,7 +193,10 @@ export default function ChatScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <ArrowLeft size={24} color="#111827" />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
+          <TouchableOpacity
+            style={styles.headerCenter}
+            onPress={() => router.push(`/profile/view/${otherUser.id}`)}
+          >
             {otherUser.profilePicture ? (
               <Image source={{ uri: otherUser.profilePicture }} style={styles.headerImage} />
             ) : (
@@ -202,7 +205,7 @@ export default function ChatScreen() {
               </View>
             )}
             <Text style={styles.headerTitle}>{otherUser.firstName}</Text>
-          </View>
+          </TouchableOpacity>
           <View style={{ width: 24 }} />
         </View>
 
