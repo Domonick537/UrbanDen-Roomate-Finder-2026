@@ -29,7 +29,6 @@ export default function OnboardingScreen() {
 
   const [profilePicture, setProfilePicture] = useState<string | undefined>();
   const [occupation, setOccupation] = useState('');
-  const [customOccupation, setCustomOccupation] = useState('');
   const [bio, setBio] = useState('');
 
   const [country, setCountry] = useState('');
@@ -89,8 +88,7 @@ export default function OnboardingScreen() {
     }
 
     if (currentStep === 1) {
-      const finalOccupation = occupation === 'Other' ? customOccupation : occupation;
-      if (!finalOccupation || !bio) {
+      if (!occupation || !bio) {
         Alert.alert('Required', 'Please fill in all fields');
         return;
       }
@@ -169,7 +167,6 @@ export default function OnboardingScreen() {
       }
 
       const selectedCity = cities.find(c => c.id === cityId);
-      const finalOccupation = occupation === 'Other' ? customOccupation : occupation;
       const finalState = (country === 'OTHER' || state === 'OTHER') ? customState : states.find(s => s.code === state)?.name || '';
       const finalCity = (country === 'OTHER' || cityId === 'other') ? customCity : selectedCity?.name || '';
 
@@ -191,7 +188,7 @@ export default function OnboardingScreen() {
           first_name: firstName,
           age: parseInt(age),
           gender,
-          occupation: finalOccupation,
+          occupation,
           bio,
           profile_picture: profilePicture,
         })
@@ -340,47 +337,14 @@ export default function OnboardingScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Occupation</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={occupation}
-                  onValueChange={(value) => setOccupation(value)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Select your occupation" value="" />
-                  <Picker.Item label="Software Engineer" value="Software Engineer" />
-                  <Picker.Item label="Data Analyst" value="Data Analyst" />
-                  <Picker.Item label="Marketing Manager" value="Marketing Manager" />
-                  <Picker.Item label="Graphic Designer" value="Graphic Designer" />
-                  <Picker.Item label="Teacher" value="Teacher" />
-                  <Picker.Item label="Nurse" value="Nurse" />
-                  <Picker.Item label="Financial Analyst" value="Financial Analyst" />
-                  <Picker.Item label="Sales Representative" value="Sales Representative" />
-                  <Picker.Item label="Product Manager" value="Product Manager" />
-                  <Picker.Item label="Consultant" value="Consultant" />
-                  <Picker.Item label="Engineer" value="Engineer" />
-                  <Picker.Item label="Accountant" value="Accountant" />
-                  <Picker.Item label="Lawyer" value="Lawyer" />
-                  <Picker.Item label="Doctor" value="Doctor" />
-                  <Picker.Item label="Student" value="Student" />
-                  <Picker.Item label="Entrepreneur" value="Entrepreneur" />
-                  <Picker.Item label="Healthcare Professional" value="Healthcare Professional" />
-                  <Picker.Item label="Writer/Content Creator" value="Writer/Content Creator" />
-                  <Picker.Item label="Other" value="Other" />
-                </Picker>
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your occupation"
+                value={occupation}
+                onChangeText={setOccupation}
+                autoCapitalize="words"
+              />
             </View>
-
-            {occupation === 'Other' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Specify Occupation</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your occupation"
-                  value={customOccupation}
-                  onChangeText={setCustomOccupation}
-                />
-              </View>
-            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Bio</Text>

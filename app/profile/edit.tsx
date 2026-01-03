@@ -23,7 +23,6 @@ export default function EditProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('male');
   const [occupation, setOccupation] = useState('');
-  const [customOccupation, setCustomOccupation] = useState('');
   const [bio, setBio] = useState('');
 
   const [budgetMin, setBudgetMin] = useState('');
@@ -94,9 +93,7 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    const finalOccupation = occupation === 'Other' ? customOccupation : occupation;
-
-    if (!firstName || !age || !finalOccupation || !bio) {
+    if (!firstName || !age || !occupation || !bio) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -117,7 +114,7 @@ export default function EditProfileScreen() {
           first_name: firstName,
           age: parseInt(age),
           gender,
-          occupation: finalOccupation,
+          occupation,
           bio,
         })
         .eq('id', user.id);
@@ -227,47 +224,14 @@ export default function EditProfileScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Occupation *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={occupation}
-                onValueChange={setOccupation}
-                style={styles.picker}
-              >
-                <Picker.Item label="Select your occupation" value="" />
-                <Picker.Item label="Software Engineer" value="Software Engineer" />
-                <Picker.Item label="Data Analyst" value="Data Analyst" />
-                <Picker.Item label="Marketing Manager" value="Marketing Manager" />
-                <Picker.Item label="Graphic Designer" value="Graphic Designer" />
-                <Picker.Item label="Teacher" value="Teacher" />
-                <Picker.Item label="Nurse" value="Nurse" />
-                <Picker.Item label="Financial Analyst" value="Financial Analyst" />
-                <Picker.Item label="Sales Representative" value="Sales Representative" />
-                <Picker.Item label="Product Manager" value="Product Manager" />
-                <Picker.Item label="Consultant" value="Consultant" />
-                <Picker.Item label="Engineer" value="Engineer" />
-                <Picker.Item label="Accountant" value="Accountant" />
-                <Picker.Item label="Lawyer" value="Lawyer" />
-                <Picker.Item label="Doctor" value="Doctor" />
-                <Picker.Item label="Student" value="Student" />
-                <Picker.Item label="Entrepreneur" value="Entrepreneur" />
-                <Picker.Item label="Healthcare Professional" value="Healthcare Professional" />
-                <Picker.Item label="Writer/Content Creator" value="Writer/Content Creator" />
-                <Picker.Item label="Other" value="Other" />
-              </Picker>
-            </View>
+            <TextInput
+              style={styles.input}
+              value={occupation}
+              onChangeText={setOccupation}
+              placeholder="Enter your occupation"
+              autoCapitalize="words"
+            />
           </View>
-
-          {occupation === 'Other' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Specify Occupation *</Text>
-              <TextInput
-                style={styles.input}
-                value={customOccupation}
-                onChangeText={setCustomOccupation}
-                placeholder="Enter your occupation"
-              />
-            </View>
-          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Bio *</Text>
