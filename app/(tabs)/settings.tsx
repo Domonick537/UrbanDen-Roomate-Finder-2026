@@ -27,6 +27,7 @@ import {
   Monitor,
   MessageSquare,
   ShieldAlert,
+  CheckSquare,
 } from 'lucide-react-native';
 import { clearAllData, setCurrentUser, getCurrentUser, updateUser } from '../../services/storage';
 import { exportUserData, deleteUserAccount } from '../../services/dataExport';
@@ -214,6 +215,19 @@ export default function SettingsScreen() {
           <View style={styles.settingContent}>
             <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Roommate Agreements</Text>
             <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>View and manage agreement templates</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.settingItem, { backgroundColor: theme.colors.card }]}
+          onPress={() => router.push('/checklists')}
+        >
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primaryLight }]}>
+            <CheckSquare size={20} color={theme.colors.primary} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Checklists</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>Track your roommate search progress</Text>
           </View>
         </TouchableOpacity>
       </View>
